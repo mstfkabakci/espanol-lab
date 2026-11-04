@@ -381,7 +381,7 @@ strict:"Accents required (á, é, í…). When off, answers without accents coun
 progTitle:"Progress",progDesc:"Results are saved in this browser. On another device you start from zero.",topicsDone:"Topics tested",avgTenses:"Average in tenses",
 drillQs:"Conjugation questions",secPhrases:"Phrases",weakVerbs:"Verbs you struggle with",nMistakes:"{0} · {1} mistakes",weakNote:"These verbs will come up more often in the conjugation drill.",
 noData:"No data yet. Do a few questions in the conjugation drill.",reset:"Reset progress",sure:"Are you sure?",resetWarn:"All your test results and stats will be deleted.",yesReset:"Yes, reset",cancel:"Cancel",
-pracTitle:"Unlimited practice",pracDesc:"Questions here are generated fresh every time, so you never see the same test twice. The top section works offline too. In the ✨ section Claude writes brand-new content each time.",
+pracTitle:"Unlimited practice",pracDesc:"Questions here are generated fresh every time, so you never see the same test twice. It all works offline too.",
 fillTitle:"♾ Fill in the blank",fillDesc:"Random verb, person and tense. Type the right form.",start10:"Start (10 questions)",
 iiTitle:"⚖️ Indefinido or imperfecto?",iiDesc:"Pick the right past tense from the time expression and the context.",
 piTitle:"⚖️ Perfecto or indefinido?",piDesc:"“Hoy he comido” or “ayer comí”? Usage in Spain.",start:"Start",aiSec:"✨ Generate with Claude",
@@ -414,7 +414,7 @@ strict:"Aksanlar zorunlu (á, é, í…). Kapalıyken aksansız cevap doğru say
 progTitle:"İlerleme",progDesc:"Sonuçlar bu tarayıcıda saklanıyor. Başka bir cihazdan açarsan sıfırdan başlar.",topicsDone:"Test çözülen konu",avgTenses:"Zamanlarda ortalama",
 drillQs:"Çekim sorusu",secPhrases:"İfadeler",weakVerbs:"Zorlandığın fiiller",nMistakes:"{0} · {1} hata",weakNote:"Bu fiiller çekim antrenmanında daha sık karşına çıkacak.",
 noData:"Henüz veri yok. Çekim antrenmanında birkaç soru çöz.",reset:"İlerlemeyi sıfırla",sure:"Emin misin?",resetWarn:"Bütün test sonuçların ve istatistiklerin silinecek.",yesReset:"Evet, sıfırla",cancel:"Vazgeç",
-pracTitle:"Sınırsız pratik",pracDesc:"Buradaki sorular her seferinde yeniden üretiliyor, aynı testi iki kez görmezsin. Üstteki bölüm internetsiz de çalışır. ✨ bölümünde ise Claude her seferinde sıfırdan içerik yazar.",
+pracTitle:"Sınırsız pratik",pracDesc:"Buradaki sorular her seferinde yeniden üretiliyor, aynı testi iki kez görmezsin. Hepsi internetsiz de çalışır.",
 fillTitle:"♾ Cümle tamamlama",fillDesc:"Rastgele fiil, kişi ve zaman. Doğru çekimi yazarsın.",start10:"Başla (10 soru)",
 iiTitle:"⚖️ Indefinido mu, imperfecto mu?",iiDesc:"Zaman ifadesine ve bağlama bakıp doğru geçmiş zamanı seç.",
 piTitle:"⚖️ Perfecto mu, indefinido mu?",piDesc:"“Hoy he comido” mu, “ayer comí” mı? İspanya kullanımı.",start:"Başla",aiSec:"✨ Claude ile üret",
@@ -1329,141 +1329,8 @@ function genContrast(kind,n){
   return out;
 }
 
-/* ================= Claude (sample capability) ================= */
-let sampleFn; // undefined = checking, null = unavailable
-(async()=>{
-  try{
-    for(let i=0;i<30&&!(window.claude&&window.claude.use);i++)await new Promise(r=>setTimeout(r,100));
-    sampleFn=window.claude&&window.claude.use?await window.claude.use("sample"):null;
-  }catch(e){sampleFn=null;}
-  renderAI();renderAIStory();renderWordSrc();
-})();
-setTimeout(()=>{if(sampleFn===undefined){sampleFn=null;renderAI();renderAIStory();renderWordSrc();}},12000);
-function parseJSON(s){if(typeof s!=="string")return s;const a=s.indexOf("{"),b=s.lastIndexOf("}");if(a<0||b<0)throw {code:"parse",message:t("aiParse")};return JSON.parse(s.slice(a,b+1));}
-async function askClaude(prompt){
-  let v;
-  if(typeof sampleFn.json==="function"){try{v=await sampleFn.json(prompt,{modelTier:"default",cache:false});}catch(e){if(e&&(e.code==="not_granted"||e.code==="rate_limited"))throw e;v=undefined;}}
-  if(v===undefined||v===null){const r=await sampleFn(prompt,{modelTier:"default",cache:false});v=r.text;}
-  return parseJSON(v);
-}
-function aiErr(e){
-  if(e&&e.code==="not_granted"){sampleFn=null;renderAI();renderAIStory();return t("aiDenied");}
-  if(e&&e.code==="rate_limited")return t("aiRate");
-  return t("aiFail",e&&e.message?": "+e.message:"");
-}
-const AITOPICS=[...LESSONS.map(L=>L.title),B("Mixed: all tenses","Karışık: tüm zamanlar"),"Por / para",B("Gustar and similar verbs (encantar, doler…)","Gustar ve benzeri fiiller (encantar, doler…)"),B("Object pronouns (lo, la, le, se lo)","Nesne zamirleri (lo, la, le, se lo)"),B("Reflexive verbs (levantarse, ducharse…)","Dönüşlü fiiller (levantarse, ducharse…)"),B("None, only the topic I type below","Hayır, sadece aşağıya yazdığım konu")];
-const FREE=AITOPICS.length-1;
-const enOf=x=>typeof x==="object"?x.en:x;
-const SEEDS=["el trabajo","el piso y el alquiler","un bar de tapas","el banco","un viaje en tren","el médico","el fin de semana","el supermercado","el gimnasio","una fiesta","el fútbol","la familia","el tiempo","el metro de Madrid","una cena con amigos","las vacaciones"];
-function aiCfg(){const c=store.aiCfg&&typeof store.aiCfg.ti==="number"?store.aiCfg:(store.aiCfg={ti:3,extra:"",lvl:"A2",n:"8",sit:"",plvl:"A2"});return c;}
-function renderAI(){
-  const box=document.getElementById("aibox");if(!box)return;
-  if(sampleFn===undefined){box.innerHTML=`<div class="card pcard"><p><span class="spin"></span>${t("aiChecking")}</p></div>`;return;}
-  if(!sampleFn){box.innerHTML=`<div class="card pcard"><p>${t("aiOff")}</p></div>`;return;}
-  const c=aiCfg();
-  const lv=v=>["A1","A2","B1"].map(l=>`<option ${v===l?"selected":""}>${l}</option>`).join("");
-  box.innerHTML=`<div class="grid">
-  <div class="card pcard ai"><h3>${t("aiTestT")}</h3><p>${t("aiTestD")}</p>
-    <label class="field">${t("topic")}<select id="aiT">${AITOPICS.map((x,i)=>`<option value="${i}" ${i===c.ti?"selected":""}>${esc(tx(x))}</option>`).join("")}</select></label>
-    <label class="field">${t("extra")}<input id="aiX" value="${esc(c.extra)}" placeholder="${t("extraPh")}"></label>
-    <div class="frow"><label class="field">${t("level")}<select id="aiL">${lv(c.lvl)}</select></label><label class="field">${t("nQs")}<select id="aiN">${["5","8","12"].map(x=>`<option ${x===c.n?"selected":""}>${x}</option>`).join("")}</select></label></div>
-    <button class="btn" id="aiGo">${t("genQs")}</button><div class="status" id="aiS"></div></div>
-  <div class="card pcard ai"><h3>${t("aiPhrT")}</h3><p>${t("aiPhrD")}</p>
-    <label class="field">${t("situation")}<input id="aiP" value="${esc(c.sit)}" placeholder="${t("sitPh")}"></label>
-    <div class="frow"><label class="field">${t("level")}<select id="aiPL">${lv(c.plvl)}</select></label></div>
-    <button class="btn" id="aiPGo">${t("genPhr")}</button><div class="status" id="aiPS"></div></div></div>`;
-  $("#aiGo").onclick=()=>{
-    Object.assign(c,{ti:+$("#aiT").value,extra:$("#aiX").value.trim(),lvl:$("#aiL").value,n:$("#aiN").value});save();
-    if(c.ti===FREE&&!c.extra){$("#aiS").className="status err";$("#aiS").textContent=t("writeTopic");return;}
-    aiTest({...c});
-  };
-  $("#aiPGo").onclick=()=>{
-    Object.assign(c,{sit:$("#aiP").value.trim(),plvl:$("#aiPL").value});save();
-    if(!c.sit){$("#aiPS").className="status err";$("#aiPS").textContent=t("writeSit");return;}
-    aiPhrases({...c});
-  };
-}
-async function aiTest(c,fromRegen){
-  const btn=$("#aiGo"),st=$("#aiS");
-  const busy=on=>{if(btn)btn.disabled=on;if(st){st.className="status";st.innerHTML=on?`<span class="spin"></span>${t("aiBusyQ")}`:"";}};
-  busy(true);
-  if(fromRegen)$("#pzone").innerHTML=`<div class="card quiz"><p class="status"><span class="spin"></span>${t("aiBusyRegen")}</p></div>`;
-  const lang=LANG,lname=LANGS[lang].ename;
-  const topic=c.ti===FREE?c.extra:enOf(AITOPICS[c.ti])+(c.extra?` (extra wish: ${c.extra})`:"");
-  const recent=(store.aiRecent||[]).slice(-25);
-  const trKey=lang==="en"?"":`,"${lang}":"${lname} translation of the full sentence"`;
-  const prompt=`You are an expert Spanish teacher. The learner lives in Madrid, CEFR level ${c.lvl}. The learner's helper language is ${lname}.
-Write ${c.n} NEW, varied practice questions on this topic: ${topic}.
-Rules:
-- Peninsular Spanish (use vosotros; pretérito perfecto for today/this week as in Spain).
-- Everyday situations; theme seed for variety: ${rnd(SEEDS)}, ${rnd(SEEDS)}.
-- Each question is ONE Spanish sentence containing exactly one blank written as ___ .
-- About half "mc" (exactly 3 options, the FIRST option is the correct one, distractors plausible but clearly wrong) and half "type" (the learner types the missing word or words).
-- "h" is a short hint shown in parentheses, e.g. "ir, nosotros", or "" if not needed. Never put the answer in the hint.
-- "en" = English translation of the full sentence.${lang==="en"?"":` "${lang}" = ${lname} translation of the full sentence.`}
-- "ex" = 1–2 sentence explanation, written in ${lname}, of why the answer is correct.
-- For "type", "a" lists every acceptable answer (with correct accents).
-- Do not reuse these sentences: ${JSON.stringify(recent)}
-Return ONLY JSON, no prose:
-{"title":"short title in ${lname}","questions":[{"type":"mc","q":"...","h":"...","en":"..."${trKey},"opts":["correct","wrong","wrong"],"ex":"..."},{"type":"type","q":"...","h":"...","en":"..."${trKey},"a":["answer"],"ex":"..."}]}`;
-  try{
-    const r=await askClaude(prompt);
-    const S=x=>typeof x==="string"?x:"";
-    const qs=(r&&Array.isArray(r.questions)?r.questions:[]).map(q=>{
-      const o={q:S(q.q),h:S(q.h),en:S(q.en),ex:esc(S(q.ex))};
-      if(lang!=="en")o[lang]=S(q[lang]);
-      if(Array.isArray(q.opts)&&q.opts.length>=2){o.opts=[...new Set(q.opts.map(S).filter(Boolean))];if(o.opts.length<2)return null;}
-      else if(Array.isArray(q.a)&&q.a.length){o.a=q.a.map(S).filter(Boolean);if(!o.a.length)return null;}
-      else return null;
-      return o.q.includes("___")?o:null;
-    }).filter(Boolean);
-    if(!qs.length)throw {message:t("aiNoQs")};
-    store.aiRecent=[...(store.aiRecent||[]),...qs.map(q=>q.q)].slice(-40);save();
-    busy(false);
-    const L={id:"ai",noSave:true,back:"#practice",backLabel:"practiceMenu",quiz:qs};
-    L.regen=()=>aiTest(c,true);
-    startGen(L);
-  }catch(e){
-    busy(false);const m=aiErr(e);
-    if(st){st.className="status err";st.textContent=m;}
-    if(fromRegen)$("#pzone").innerHTML=`<div class="card quiz"><p class="status err">${esc(m)}</p></div>`;
-  }
-}
-async function aiPhrases(c){
-  const btn=$("#aiPGo"),st=$("#aiPS");
-  if(btn)btn.disabled=true;if(st){st.className="status";st.innerHTML=`<span class="spin"></span>${t("aiBusyP")}`;}
-  const lang=LANG,lname=LANGS[lang].ename;
-  const have=allPhr().map(p=>p.es).slice(0,80);
-  const keys=`"es":"Spanish phrase","en":"English meaning"${lang==="en"?"":`,"${lang}":"${lname} meaning"`}`;
-  const prompt=`You are an expert Spanish teacher. The learner lives in Madrid, CEFR level ${c.plvl}. The learner's helper language is ${lname}.
-Write 12 useful, natural, Peninsular Spanish phrases a person would really say in this situation: "${c.sit}".
-Mix questions and statements, include a few colloquial Spain expressions where natural. Keep each phrase short.
-Avoid these phrases the learner already has: ${JSON.stringify(have)}
-Return ONLY JSON: {"title":"short title for the situation in ${lname}","items":[{${keys}}]}`;
-  try{
-    const r=await askClaude(prompt);
-    const S=x=>typeof x==="string"?x:"";
-    const items=(r&&Array.isArray(r.items)?r.items:[]).map(i=>{const o={es:S(i.es),en:S(i.en)};if(lang!=="en")o[lang]=S(i[lang]);return o;}).filter(i=>i.es&&(i.en||i[lang]));
-    if(!items.length)throw {message:t("aiNoP")};
-    if(st)st.textContent="";if(btn)btn.disabled=false;
-    showAIPhrases(S(r.title)||c.sit,items,c);
-  }catch(e){if(btn)btn.disabled=false;if(st){st.className="status err";st.textContent=aiErr(e);}}
-}
-function showAIPhrases(title,items,c){
-  const z=$("#pzone");
-  z.innerHTML=`<div class="card" style="padding:18px"><h2 style="margin-bottom:8px">${esc(title)}</h2>
-  <div class="plist">${items.map(p=>`<div class="prow">${spk(p.es)}<div><div class="es">${esc(p.es)}</div><div class="m">${transInline(p)}</div></div></div>`).join("")}</div>
-  <div class="btns mt"><button class="btn" id="aiCards">${t("studyCards")}</button><button class="btn ghost" id="aiSave">${t("addMine")}</button><button class="btn ghost" id="aiMore">${t("morePhr")}</button></div></div>
-  <div id="pbody" class="mt"></div>`;
-  $("#aiCards").onclick=()=>{phrState.custom=items;phrState.deck=null;phrState.dir="es";drawCards();$("#pbody").scrollIntoView({behavior:"smooth",block:"start"});};
-  $("#aiSave").onclick=()=>{
-    store.myPhr=store.myPhr||[];const have=new Set(store.myPhr.map(x=>exo(x).es));let k=0;
-    items.forEach(i=>{if(!have.has(i.es)){store.myPhr.push(Object.assign({},i));k++;}});
-    save();syncMyPhr();$("#aiSave").textContent=t("added",k);$("#aiSave").disabled=true;
-  };
-  $("#aiMore").onclick=()=>aiPhrases(c);
-  z.scrollIntoView({behavior:"smooth",block:"start"});
-}
+/* Claude-generated content was removed: the app is fully offline/self-contained. */
+const sampleFn=null;
 
 /* ================= Practice view ================= */
 function startGen(L){
@@ -1487,14 +1354,12 @@ function renderPractice(preset){
     <div class="card pcard"><h3>${t("iiTitle")}</h3><p>${t("iiDesc")}</p><button class="btn dark" id="pII">${t("start")}</button></div>
     <div class="card pcard"><h3>${t("piTitle")}</h3><p>${t("piDesc")}</p><button class="btn dark" id="pPI">${t("start")}</button></div>
   </div>
-  <div class="sec"><h2>${t("aiSec")}</h2><div id="aibox"></div></div>
   <div id="pzone" style="scroll-margin-top:110px"></div>`;
   document.querySelectorAll("[data-pt]").forEach(b=>b.onclick=()=>{const k=b.dataset.pt,i=c.tenses.indexOf(k);if(i>=0){if(c.tenses.length>1)c.tenses.splice(i,1);}else c.tenses.push(k);save();b.classList.toggle("on",c.tenses.includes(k));});
   const fill=ts=>startGen(genLesson(()=>genFill(ts,10)));
   $("#pFill").onclick=()=>fill(c.tenses.slice());
   $("#pII").onclick=()=>startGen(genLesson(()=>genContrast("ii",10)));
   $("#pPI").onclick=()=>startGen(genLesson(()=>genContrast("pi",10)));
-  renderAI();
   const g=GENMAP[preset];
   if(g==="ii")$("#pII").click();else if(g)fill([g]);
 }
@@ -1698,8 +1563,7 @@ function renderReading(){
   ${CLASSICS.length?`<div class="sec"><h2>${t("classicsTitle")}</h2><p class="muted" style="margin:0 0 12px;max-width:680px">${t("classicsDesc")}</p><div class="grid">${CLASSICS.map(classicCard).join("")}</div></div>`:""}
   <div class="sec"><h2>${t("madridStories")}</h2><p class="muted" style="margin:0 0 12px;max-width:680px">${t("readDesc")}</p><div class="grid">${STORIES.map(storyCard).join("")}</div></div>
   ${mine.length?`<div class="sec"><h2>${t("myStories")}</h2><div class="grid">${mine.map(storyCard).join("")}</div></div>`:""}
-  <div class="sec"><h2>${t("aiSec")}</h2><div id="aistory"></div></div>`;
-  renderAIStory();
+`;
 }
 function readPair(s){
   let p=store.settings.rpair||"en";
@@ -1767,59 +1631,6 @@ function renderStory(s){
   };
 }
 
-/* ================= Claude: story generator ================= */
-function storyCfg(){return store.aiStoryCfg||(store.aiStoryCfg={lvl:"A2",fi:"",theme:""});}
-function renderAIStory(){
-  const box=document.getElementById("aistory");if(!box)return;
-  if(sampleFn===undefined){box.innerHTML=`<div class="card pcard"><p><span class="spin"></span>${t("aiChecking")}</p></div>`;return;}
-  if(!sampleFn){box.innerHTML=`<div class="card pcard"><p>${t("aiOff")}</p></div>`;return;}
-  const c=storyCfg();
-  const lv=["A1","A2","B1","B2"].map(l=>`<option ${c.lvl===l?"selected":""}>${l}</option>`).join("");
-  const foci=[["",t("anyTense")],...LESSONS.filter(L=>L.id!=="serestar").map(L=>[L.id,tx(L.title)])];
-  box.innerHTML=`<div class="card pcard ai" style="max-width:640px"><h3>${t("aiStoryT")}</h3><p>${t("aiStoryD")}</p>
-    <label class="field">${t("theme")}<input id="asT" value="${esc(c.theme)}" placeholder="${t("themePh")}"></label>
-    <div class="frow"><label class="field">${t("level")}<select id="asL">${lv}</select></label>
-    <label class="field">${t("tenseFocus")}<select id="asF">${foci.map(([k,l])=>`<option value="${k}" ${c.fi===k?"selected":""}>${esc(l)}</option>`).join("")}</select></label></div>
-    <button class="btn" id="asGo">${t("genStory")}</button><div class="status" id="asS"></div></div>`;
-  $("#asGo").onclick=()=>{Object.assign(c,{theme:$("#asT").value.trim(),lvl:$("#asL").value,fi:$("#asF").value});save();aiStory({...c});};
-}
-async function aiStory(c){
-  const btn=$("#asGo"),st=$("#asS");
-  if(btn)btn.disabled=true;if(st){st.className="status";st.innerHTML=`<span class="spin"></span>${t("aiBusyS")}`;}
-  const lang=LANG,lname=LANGS[lang].ename,two=lang!=="en";
-  const L=LESSONS.find(x=>x.id===c.fi);
-  const focus=L?`Use mainly the ${enOf(L.title)} tense so the learner practises it.`:"Use a natural mix of tenses for the level.";
-  const titles=allStories().map(s=>s.title).slice(-30);
-  const k=two?`,"${lang}":"${lname} translation"`:"";
-  const prompt=`You are an expert Spanish teacher and a good short-story writer.
-Write a NEW, original short story in Peninsular Spanish for a learner at CEFR level ${c.lvl} who lives in Madrid.
-${c.theme?`Theme: ${c.theme}.`:`Theme seed for variety: ${rnd(SEEDS)}.`} ${focus}
-- 2 or 3 paragraphs, 50–90 words each, natural and engaging, everyday life in Spain, with a small twist or a warm ending.
-- Vocabulary and grammar must match level ${c.lvl}.
-- Give an English translation of every paragraph${two?` and a ${lname} translation`:""}.
-- 6 key words from the story with their meanings.
-- 3 multiple-choice comprehension questions in Spanish: exactly 3 options each, the FIRST option is the correct one; give a translation of each question and a one-sentence explanation in ${lname} that quotes the text.
-- Do not reuse these titles: ${JSON.stringify(titles)}
-Return ONLY JSON, no prose:
-{"title":"Spanish title","title_en":"English title"${two?`,"title_${lang}":"${lname} title"`:""},"paragraphs":[{"es":"...","en":"..."${k}}],"vocab":[{"es":"...","en":"..."${k}}],"questions":[{"q":"...","en":"..."${k},"opts":["correct","wrong","wrong"],"ex":"..."}]}`;
-  try{
-    const r=await askClaude(prompt);
-    const S=x=>typeof x==="string"?x:"";
-    const pick=o=>{const x={es:S(o.es),en:S(o.en)};if(two)x[lang]=S(o[lang]);return x;};
-    const paras=(r&&Array.isArray(r.paragraphs)?r.paragraphs:[]).map(pick).filter(p=>p.es&&p.en);
-    if(!paras.length)throw {message:t("aiNoS")};
-    const vocab=(Array.isArray(r.vocab)?r.vocab:[]).map(pick).filter(v=>v.es);
-    const quiz=(Array.isArray(r.questions)?r.questions:[]).map(q=>{
-      const o={q:S(q.q),en:S(q.en),ex:esc(S(q.ex))};if(two)o[lang]=S(q[lang]);
-      o.opts=Array.isArray(q.opts)?[...new Set(q.opts.map(S).filter(Boolean))]:[];
-      return o.q&&o.opts.length>=2?o:null;}).filter(Boolean);
-    const tt={en:S(r.title_en)};if(two)tt[lang]=S(r["title_"+lang]);
-    tempStory={id:"tmp",title:S(r.title)||"Historia",tt,lvl:c.lvl,focus:L?L.id:null,paras,vocab,quiz,ai:true};
-    if(btn)btn.disabled=false;if(st)st.textContent="";
-    if(location.hash==="#r-tmp")route();else location.hash="#r-tmp";
-  }catch(e){if(btn)btn.disabled=false;if(st){st.className="status err";st.textContent=aiErr(e);}}
-}
-
 /* ================= German UI ================= */
 T.de={
 tabTenses:"Zeiten",tabPhrases:"Ausdrücke",tabPractice:"Übung",tabDrill:"Konjugation",tabProgress:"Fortschritt",
@@ -1842,7 +1653,7 @@ strict:"Akzente sind Pflicht (á, é, í…). Wenn aus, zählen Antworten ohne A
 progTitle:"Fortschritt",progDesc:"Die Ergebnisse werden in diesem Browser gespeichert. Auf einem anderen Gerät fängst du bei null an.",topicsDone:"Getestete Themen",avgTenses:"Durchschnitt bei den Zeiten",
 drillQs:"Konjugationsfragen",secPhrases:"Ausdrücke",weakVerbs:"Verben, die dir schwerfallen",nMistakes:"{0} · {1} Fehler",weakNote:"Diese Verben kommen im Konjugationstraining öfter dran.",
 noData:"Noch keine Daten. Beantworte ein paar Fragen im Konjugationstraining.",reset:"Fortschritt zurücksetzen",sure:"Bist du sicher?",resetWarn:"Alle Testergebnisse und Statistiken werden gelöscht.",yesReset:"Ja, zurücksetzen",cancel:"Abbrechen",
-pracTitle:"Unbegrenzt üben",pracDesc:"Die Fragen hier werden jedes Mal neu erzeugt, du siehst also nie zweimal denselben Test. Der obere Bereich funktioniert auch offline. Im ✨-Bereich schreibt Claude jedes Mal ganz neue Inhalte.",
+pracTitle:"Unbegrenzt üben",pracDesc:"Die Fragen hier werden jedes Mal neu erzeugt, du siehst also nie zweimal denselben Test. Alles funktioniert auch offline.",
 fillTitle:"♾ Lückentext",fillDesc:"Zufälliges Verb, Person und Zeit. Gib die richtige Form ein.",start10:"Start (10 Fragen)",
 iiTitle:"⚖️ Indefinido oder imperfecto?",iiDesc:"Wähle anhand der Zeitangabe und des Kontexts die richtige Vergangenheitsform.",
 piTitle:"⚖️ Perfecto oder indefinido?",piDesc:"„Hoy he comido“ oder „ayer comí“? Gebrauch in Spanien.",start:"Start",aiSec:"✨ Mit Claude erstellen",
@@ -2020,38 +1831,7 @@ async function lookupWeb(word){
   }
   return w;
 }
-async function lookupClaude(word){
-  const ks=Object.keys(LANGS);
-  const prompt=`You are a precise Spanish dictionary for a learner (around CEFR A2–B1) who lives in Madrid.
-The learner typed: "${word.replace(/"/g,"'")}"
-- If it is Spanish (any form), explain the dictionary headword: infinitive for verbs, masculine singular for adjectives, nouns with their article (e.g. "la casa"). If the learner typed an inflected form, say which form it is in "forms".
-- If it is English, Turkish or German, give the most common Spanish equivalent and explain that.
-- Peninsular Spanish. Short and practical.
-Languages: ${ks.map(k=>k+" = "+LANGS[k].ename).join(", ")}.
-Return ONLY JSON:
-{"es":"headword","typed":"what the learner typed","pos":"noun | verb | adjective | adverb | expression | preposition | …","gender":"m, f or empty",
-"meanings":{${ks.map(k=>`"${k}":["1–3 short meanings in ${LANGS[k].ename}"]`).join(",")}},
-"usage":{${ks.map(k=>`"${k}":"1–2 sentences in ${LANGS[k].ename}: when and how it is used (register, typical prepositions or collocations, false friends)"`).join(",")}},
-"forms":"irregular forms or a short conjugation/inflection note (in English), or empty",
-"examples":[{"es":"natural everyday example sentence using the word",${ks.map(k=>`"${k}":"${LANGS[k].ename} translation"`).join(",")}}]}
-Give exactly 3 examples.`;
-  const r=await askClaude(prompt);
-  const S=x=>typeof x==="string"?x.trim():"";
-  if(!r||!S(r.es))return null;
-  const w={es:S(r.es),typed:S(r.typed)||word,pos:S(r.pos),gender:S(r.gender).toLowerCase().slice(0,1),m:{},usage:{},forms:S(r.forms),ex:[],src:"claude"};
-  for(const k of ks){
-    const m=r.meanings&&r.meanings[k];
-    if(Array.isArray(m))w.m[k]=m.map(S).filter(Boolean).slice(0,3);else if(S(m))w.m[k]=[S(m)];
-    if(r.usage&&S(r.usage[k]))w.usage[k]=S(r.usage[k]);
-  }
-  w.ex=(Array.isArray(r.examples)?r.examples:[]).map(x=>{const o={es:S(x&&x.es)};ks.forEach(k=>{if(x&&S(x[k]))o[k]=S(x[k]);});return o;}).filter(x=>x.es).slice(0,4);
-  return w;
-}
 async function lookupWord(word){
-  if(sampleFn){
-    try{const w=await lookupClaude(word);if(w)return {w,status:"ok"};}
-    catch(e){if(e&&e.code==="not_granted"){sampleFn=null;}}
-  }
   if(navigator.onLine===false)return {w:null,status:"offline"};
   try{const w=await lookupWeb(word);return w?{w,status:"ok"}:{w:null,status:"notfound"};}
   catch(e){return {w:null,status:navigator.onLine===false?"offline":"notfound"};}
