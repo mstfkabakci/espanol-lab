@@ -1,5 +1,5 @@
 /* Español Lab service worker: works offline, picks up updates when online. */
-const CACHE = "espanol-lab-202611040904";
+const CACHE = "espanol-lab-202611040908";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./favicon-32.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -15,7 +15,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (req.mode === "navigate") {            // the page itself: network first, cache as fallback
-    e.respondWith(fetch(req).then(res => { put("./index.html", res.clone()); return res; })
+    e.respondWith(fetch(req, { cache: "no-cache" }).then(res => { put("./index.html", res.clone()); return res; })
       .catch(() => caches.match("./index.html")));
     return;
   }
