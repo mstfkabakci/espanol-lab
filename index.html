@@ -404,14 +404,22 @@ const GOOD_ES_V=/(M[oó]nica|Marisol|Jorge|Paulina|Juan|Google español|Elvira|[
 function loadVoices(){if(!canSpeak)return voices;try{const v=speechSynthesis.getVoices();if(v&&v.length)voices=v;}catch(e){}return voices;}
 const esVoices=()=>loadVoices().filter(v=>/^es\b/i.test(vlang(v)));
 function rankV(v){const l=vlang(v).toLowerCase();let r=l==="es-es"?100:50;if(GOOD_ES_V.test(v.name))r+=20;if(NOVELTY_V.test(v.name))r-=60;if(v.localService)r+=5;return r;}
-function pickEs(){const list=esVoices();if(!list.length)return null;const want=store.settings&&store.settings.voice;if(want){const w=list.find(v=>v.voiceURI===want||v.name===want);if(w)return w;}return list.slice().sort((a,b)=>rankV(b)-rankV(a))[0];}
+const vkey=v=>v.voiceURI||v.name;
+const badV=new Set(); /* voices that never started speaking in this session */
+function esCandidates(){const list=esVoices().slice().sort((a,b)=>rankV(b)-rankV(a));const want=store.settings&&store.settings.voice;if(want){const i=list.findIndex(v=>vkey(v)===want||v.name===want);if(i>0)list.unshift(list.splice(i,1)[0]);}return list.filter(v=>!badV.has(vkey(v)));}
+/* if every Spanish voice has failed this session (e.g. phone was on silent), forget the failures and start over rather than use a non-Spanish voice */
+function esCands(){let c=esCandidates();if(!c.length&&esVoices().length){badV.clear();c=esCandidates();}return c;}
+function pickEs(){return esCands()[0]||null;}
+/* iOS: let page audio play like media (not tied to the ring/silent switch) where Safari supports the AudioSession API */
+function audioPlayback(){try{if(navigator.audioSession&&navigator.audioSession.type!=="playback")navigator.audioSession.type="playback";}catch(e){}}
 if(canSpeak){loadVoices();try{speechSynthesis.addEventListener("voiceschanged",loadVoices);}catch(e){try{speechSynthesis.onvoiceschanged=loadVoices;}catch(_){}}[300,1000,3000].forEach(ms=>setTimeout(loadVoices,ms));}
 let voiceWarned=false;
 const T0=Date.now();
 function warnNoVoice(){if(voiceWarned||(!voices.length&&Date.now()-T0<2500))return;voiceWarned=true;toast(`${t("noEsVoice")} <a href="#progress" onclick="setTimeout(()=>{const b=document.getElementById('vbox');b&&b.scrollIntoView({block:'center'});},300)" style="color:#ffd27a">${t("voiceFix")}</a>`,12000);}
+const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent||"")||(/Macintosh/.test(navigator.userAgent||"")&&navigator.maxTouchPoints>1);
 function platformHelp(){
   const ua=navigator.userAgent||"";
-  const ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  const ios=isIOS();
   let h=ios?t("voiceHelpIOS"):/Android/.test(ua)?t("voiceHelpAndroid"):/Windows/.test(ua)?t("voiceHelpWin"):/Macintosh/.test(ua)?t("voiceHelpMac"):t("voiceHelpOther");
   if(!ios&&/Firefox\//.test(ua))h+=" "+t("voiceHelpFF");
   if(/Electron\//.test(ua))h+=" "+t("voiceHelpApp");
@@ -423,9 +431,28 @@ function mkUtt(s,rate){
   if(v){u.voice=v;u.lang=vlang(v);}else{u.lang="es-ES";warnNoVoice();}
   u.rate=rate||.92;return u;
 }
-function speak(s){
+let speakSeq=0;
+/* Speak with the best Spanish voice. If a voice never starts (error, or silence after 2.5 s), try the next Spanish voice.
+   Never fall back to a non-Spanish voice once Spanish voices exist. onStatus(state, voice, info) reports progress. */
+function speak(s,onStatus){
   if(!canSpeak)return;
-  try{const u=mkUtt(s);speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
+  audioPlayback();
+  const seq=++speakSeq,st=(...a)=>{if(seq===speakSeq&&onStatus)try{onStatus(...a);}catch(e){}};
+  const text=s.replace(/_+/g," ");
+  const go=(cands,first)=>{
+    const v=cands[0]||null;
+    if(!v&&!first){st("fail");toast(t("voiceFail"),9000);return;}
+    const u=new SpeechSynthesisUtterance(text);u.rate=.92;
+    if(v){u.voice=v;u.lang=vlang(v);}else{u.lang="es-ES";warnNoVoice();}
+    let started=false,moved=false;
+    const next=why=>{if(moved||seq!==speakSeq)return;moved=true;badV.add(vkey(v));st("retry",v,why);try{speechSynthesis.cancel();}catch(e){}go(cands.slice(1),false);};
+    u.onstart=()=>{started=true;st("start",v);};
+    u.onend=()=>st("end",v);
+    u.onerror=e=>{const code=e&&e.error;if(code==="interrupted"||code==="canceled")return;if(v&&!started)next(code||"error");else st("error",v,code);};
+    try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){st("error",v,String(e));}
+    if(v)setTimeout(()=>{if(seq!==speakSeq||started||moved)return;if(speechSynthesis.speaking){started=true;return;}next("timeout");},2500);
+  };
+  go(esCands(),true);
 }
 function toast(msg,ms){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el);}el.innerHTML=`<span>${msg}</span><button aria-label="close">✕</button>`;el.classList.add("show");el.querySelector("button").onclick=()=>el.classList.remove("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),ms||5000);}
 const spk=s=>canSpeak?`<button class="spk" title="▶" data-say="${esc(s)}">🔊</button>`:"";
@@ -1609,7 +1636,7 @@ const lessonTitle=id=>{const L=LESSONS.find(x=>x.id===id);return L?tx(L.title):"
 let readingAloud=false;
 function readAloud(texts,onDone){
   if(!canSpeak)return;
-  try{speechSynthesis.cancel();texts.forEach((x,i)=>{const u=mkUtt(x,.9);if(i===texts.length-1)u.onend=onDone;speechSynthesis.speak(u);});}catch(e){}
+  audioPlayback();try{speechSynthesis.cancel();texts.forEach((x,i)=>{const u=mkUtt(x,.9);if(i===texts.length-1)u.onend=onDone;speechSynthesis.speak(u);});}catch(e){}
 }
 function storyCard(s){
   const b=store.lessons["story-"+s.id];const pc=b?Math.round(b.best*100):null;
@@ -3615,17 +3642,17 @@ quiz:[
 );
 
 /* ================= Voice settings ================= */
-Object.assign(T.en,{voiceHelpWin:"On a Windows computer the easiest fix is to open this page in Microsoft Edge or Google Chrome: both come with Spanish voices. Or add one to Windows: Settings → Time & language → Speech → Manage voices → Add voices → Español (España), then restart the browser.",voiceHelpMac:"On a Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices… → Spanish (Spain), then restart the browser.",voiceHelpAndroid:"On Android: Settings → Accessibility → Text-to-speech output → Google (⚙) → Install voice data → Spanish (Spain).",voiceHelpOther:"Open this page in Google Chrome or Microsoft Edge, which come with Spanish voices.",voiceHelpFF:"Firefox only uses the voices installed on the computer.",voiceHelpApp:"Inside the Claude desktop app only the computer's own voices are available; open the page in Chrome or Edge instead.",voiceDiag:"This browser offers {0} voice(s), none of them Spanish: {1}.",voiceTitle:"🔊 Read-aloud voice",voiceCur:"Spanish voice in use:",voicePick:"Choose another Spanish voice",voiceTest:"▶ Test",voiceSample:"Hola, esto es una prueba. ¿Me entiendes bien?",
+Object.assign(T.en,{voiceFail:"The Spanish voice didn't start. If the iPhone is on silent (🔕), turn silent mode off and try again.",vsStart:"▶ Speaking…",vsEnd:"✓ Finished. If you heard nothing, check the volume and make sure silent mode (🔕) is off.",vsRetry:"“{0}” didn't start, trying another Spanish voice…",vsErr:"✕ Error: {0}",vsFail:"✕ No Spanish voice could start.",voiceSilentIOS:"🔕 No sound at all? While the iPhone is on silent (bell with a line through it at the top of the screen), web pages may be muted. Turn silent mode off, turn the volume up and press Test again.",voiceHelpWin:"On a Windows computer the easiest fix is to open this page in Microsoft Edge or Google Chrome: both come with Spanish voices. Or add one to Windows: Settings → Time & language → Speech → Manage voices → Add voices → Español (España), then restart the browser.",voiceHelpMac:"On a Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices… → Spanish (Spain), then restart the browser.",voiceHelpAndroid:"On Android: Settings → Accessibility → Text-to-speech output → Google (⚙) → Install voice data → Spanish (Spain).",voiceHelpOther:"Open this page in Google Chrome or Microsoft Edge, which come with Spanish voices.",voiceHelpFF:"Firefox only uses the voices installed on the computer.",voiceHelpApp:"Inside the Claude desktop app only the computer's own voices are available; open the page in Chrome or Edge instead.",voiceDiag:"This browser offers {0} voice(s), none of them Spanish: {1}.",voiceTitle:"🔊 Read-aloud voice",voiceCur:"Spanish voice in use:",voicePick:"Choose another Spanish voice",voiceTest:"▶ Test",voiceSample:"Hola, esto es una prueba. ¿Me entiendes bien?",
  noEsVoice:"This browser has no Spanish voice, so Spanish is read with an English voice.",voiceFix:"How to fix it →",
  voiceNone:"No Spanish voice was found on this device, so the text will be read with the default (English) voice.",
  voiceHelpIOS:"On iPhone: Settings → Accessibility → Spoken Content → Voices → Spanish, and download a voice (e.g. Mónica). Then close the app completely and open it again.",
  voiceNoSpeech:"This browser can't read text aloud.",voiceWait:"Looking for voices…",voiceAuto:"(automatic)"});
-Object.assign(T.tr,{voiceHelpWin:"Windows bilgisayarda en kolay çözüm bu sayfayı Microsoft Edge ya da Google Chrome'da açmak: ikisinde de İspanyolca ses hazır geliyor. Ya da Windows'a ses ekle: Ayarlar → Zaman ve dil → Konuşma → Sesleri yönet → Ses ekle → Español (España), sonra tarayıcıyı yeniden başlat.",voiceHelpMac:"Mac'te: Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik → Sistem sesi → Sesleri Yönet… → İspanyolca (İspanya), sonra tarayıcıyı yeniden başlat.",voiceHelpAndroid:"Android'de: Ayarlar → Erişilebilirlik → Metin okuma çıkışı → Google (⚙) → Ses verilerini yükle → İspanyolca (İspanya).",voiceHelpOther:"Bu sayfayı İspanyolca sesleri hazır gelen Google Chrome ya da Microsoft Edge'de aç.",voiceHelpFF:"Firefox yalnızca bilgisayarda yüklü sesleri kullanıyor.",voiceHelpApp:"Claude masaüstü uygulamasının içinde yalnızca bilgisayarın kendi sesleri kullanılabiliyor; sayfayı Chrome ya da Edge'de aç.",voiceDiag:"Bu tarayıcıda {0} ses var, hiçbiri İspanyolca değil: {1}.",voiceTitle:"🔊 Sesli okuma",voiceCur:"Kullanılan İspanyolca ses:",voicePick:"Başka bir İspanyolca ses seç",voiceTest:"▶ Dene",
+Object.assign(T.tr,{voiceFail:"İspanyolca ses başlamadı. iPhone sessiz moddaysa (🔕) sessiz modu kapatıp tekrar dene.",vsStart:"▶ Okunuyor…",vsEnd:"✓ Okuma bitti. Hiç ses duymadıysan ses düzeyini aç ve sessiz modun (🔕) kapalı olduğundan emin ol.",vsRetry:"“{0}” başlamadı, başka bir İspanyolca ses deneniyor…",vsErr:"✕ Hata: {0}",vsFail:"✕ Hiçbir İspanyolca ses başlatılamadı.",voiceSilentIOS:"🔕 Hiç ses gelmiyor mu? iPhone sessiz moddayken (ekranın üstünde üstü çizili zil) web sayfalarının sesi kısılabiliyor. Sessiz modu kapat, sesi aç ve tekrar Dene'ye bas.",voiceHelpWin:"Windows bilgisayarda en kolay çözüm bu sayfayı Microsoft Edge ya da Google Chrome'da açmak: ikisinde de İspanyolca ses hazır geliyor. Ya da Windows'a ses ekle: Ayarlar → Zaman ve dil → Konuşma → Sesleri yönet → Ses ekle → Español (España), sonra tarayıcıyı yeniden başlat.",voiceHelpMac:"Mac'te: Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik → Sistem sesi → Sesleri Yönet… → İspanyolca (İspanya), sonra tarayıcıyı yeniden başlat.",voiceHelpAndroid:"Android'de: Ayarlar → Erişilebilirlik → Metin okuma çıkışı → Google (⚙) → Ses verilerini yükle → İspanyolca (İspanya).",voiceHelpOther:"Bu sayfayı İspanyolca sesleri hazır gelen Google Chrome ya da Microsoft Edge'de aç.",voiceHelpFF:"Firefox yalnızca bilgisayarda yüklü sesleri kullanıyor.",voiceHelpApp:"Claude masaüstü uygulamasının içinde yalnızca bilgisayarın kendi sesleri kullanılabiliyor; sayfayı Chrome ya da Edge'de aç.",voiceDiag:"Bu tarayıcıda {0} ses var, hiçbiri İspanyolca değil: {1}.",voiceTitle:"🔊 Sesli okuma",voiceCur:"Kullanılan İspanyolca ses:",voicePick:"Başka bir İspanyolca ses seç",voiceTest:"▶ Dene",
  noEsVoice:"Bu tarayıcıda İspanyolca ses yok, bu yüzden İspanyolca metin İngilizce sesle okunuyor.",voiceFix:"Nasıl düzeltilir →",
  voiceNone:"Bu cihazda İspanyolca ses bulunamadı; metin varsayılan (İngilizce) sesle okunur.",
  voiceHelpIOS:"iPhone'da: Ayarlar → Erişilebilirlik → Seslendirilen İçerik → Sesler → İspanyolca yolundan bir ses indir (ör. Mónica). Sonra uygulamayı tamamen kapatıp yeniden aç.",
  voiceNoSpeech:"Bu tarayıcı sesli okuma yapamıyor.",voiceWait:"Sesler aranıyor…",voiceAuto:"(otomatik)"});
-Object.assign(T.de,{voiceHelpWin:"Auf einem Windows-PC ist es am einfachsten, diese Seite in Microsoft Edge oder Google Chrome zu öffnen: Beide bringen spanische Stimmen mit. Oder füge Windows eine Stimme hinzu: Einstellungen → Zeit und Sprache → Sprache → Stimmen verwalten → Stimmen hinzufügen → Español (España), dann den Browser neu starten.",voiceHelpMac:"Auf dem Mac: Systemeinstellungen → Bedienungshilfen → Gesprochene Inhalte → Systemstimme → Stimmen verwalten … → Spanisch (Spanien), dann den Browser neu starten.",voiceHelpAndroid:"Auf Android: Einstellungen → Bedienungshilfen → Sprachausgabe → Google (⚙) → Sprachdaten installieren → Spanisch (Spanien).",voiceHelpOther:"Öffne diese Seite in Google Chrome oder Microsoft Edge, die spanische Stimmen mitbringen.",voiceHelpFF:"Firefox nutzt nur die auf dem Computer installierten Stimmen.",voiceHelpApp:"In der Claude-Desktop-App sind nur die Stimmen des Computers verfügbar; öffne die Seite lieber in Chrome oder Edge.",voiceDiag:"Dieser Browser bietet {0} Stimme(n), keine davon spanisch: {1}.",voiceTitle:"🔊 Vorlesestimme",voiceCur:"Verwendete spanische Stimme:",voicePick:"Andere spanische Stimme wählen",voiceTest:"▶ Testen",
+Object.assign(T.de,{voiceFail:"Die spanische Stimme ist nicht gestartet. Ist das iPhone stumm (🔕), schalte den Stummmodus aus und versuch es erneut.",vsStart:"▶ Wird gesprochen …",vsEnd:"✓ Fertig. Hast du nichts gehört, prüfe die Lautstärke und ob der Stummmodus (🔕) aus ist.",vsRetry:"„{0}“ ist nicht gestartet, versuche eine andere spanische Stimme …",vsErr:"✕ Fehler: {0}",vsFail:"✕ Keine spanische Stimme konnte starten.",voiceSilentIOS:"🔕 Gar kein Ton? Solange das iPhone stumm ist (durchgestrichene Glocke oben am Bildschirm), können Webseiten stumm bleiben. Stummmodus aus, Lautstärke hoch und erneut auf Testen tippen.",voiceHelpWin:"Auf einem Windows-PC ist es am einfachsten, diese Seite in Microsoft Edge oder Google Chrome zu öffnen: Beide bringen spanische Stimmen mit. Oder füge Windows eine Stimme hinzu: Einstellungen → Zeit und Sprache → Sprache → Stimmen verwalten → Stimmen hinzufügen → Español (España), dann den Browser neu starten.",voiceHelpMac:"Auf dem Mac: Systemeinstellungen → Bedienungshilfen → Gesprochene Inhalte → Systemstimme → Stimmen verwalten … → Spanisch (Spanien), dann den Browser neu starten.",voiceHelpAndroid:"Auf Android: Einstellungen → Bedienungshilfen → Sprachausgabe → Google (⚙) → Sprachdaten installieren → Spanisch (Spanien).",voiceHelpOther:"Öffne diese Seite in Google Chrome oder Microsoft Edge, die spanische Stimmen mitbringen.",voiceHelpFF:"Firefox nutzt nur die auf dem Computer installierten Stimmen.",voiceHelpApp:"In der Claude-Desktop-App sind nur die Stimmen des Computers verfügbar; öffne die Seite lieber in Chrome oder Edge.",voiceDiag:"Dieser Browser bietet {0} Stimme(n), keine davon spanisch: {1}.",voiceTitle:"🔊 Vorlesestimme",voiceCur:"Verwendete spanische Stimme:",voicePick:"Andere spanische Stimme wählen",voiceTest:"▶ Testen",
  noEsVoice:"Dieser Browser hat keine spanische Stimme, deshalb wird Spanisch mit einer englischen Stimme gelesen.",voiceFix:"So behebst du es →",
  voiceNone:"Auf diesem Gerät wurde keine spanische Stimme gefunden; der Text wird mit der Standardstimme (Englisch) gelesen.",
  voiceHelpIOS:"Auf dem iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Spanisch, und eine Stimme laden (z. B. Mónica). Danach die App ganz schließen und neu öffnen.",
@@ -3640,10 +3667,13 @@ function renderVoiceBox(tries){
    <label class="muted" style="display:block;margin-top:10px;font-size:13.5px">${t("voicePick")}</label>
    <select id="vsel"><option value="">${t("voiceAuto")}</option>${list.map(v=>`<option value="${esc(v.voiceURI||v.name)}" ${store.settings.voice&&(store.settings.voice===v.voiceURI||store.settings.voice===v.name)?"selected":""}>${esc(v.name)} · ${esc(vlang(v))}</option>`).join("")}</select>
    <button class="btn" id="vtest">${t("voiceTest")}</button>
+   <div id="vstat" style="margin-top:10px;font-size:14px;min-height:1.2em"></div>
+   ${isIOS()?`<p style="font-size:14px;margin:12px 0 0">${t("voiceSilentIOS")}</p>`:""}
    <p class="muted" style="font-size:13px;margin:12px 0 0">${platformHelp()}</p>`
   :`<p style="margin:0 0 8px">${t("voiceNone")}</p>${voices.length?`<p class="muted" style="font-size:13px;margin:0 0 8px">${t("voiceDiag",voices.length,esc(voices.slice(0,6).map(v=>v.name).join(", "))+(voices.length>6?"…":""))}</p>`:""}<p style="font-size:14.5px;margin:0">${platformHelp()}</p>`;
-  const sel=$("#vsel");if(sel)sel.onchange=()=>{store.settings.voice=sel.value||null;save();renderVoiceBox();speak(T.en.voiceSample);};
-  const tb=$("#vtest");if(tb)tb.onclick=()=>speak(T.en.voiceSample);
+  const test=()=>speak(T.en.voiceSample,(state,v,info)=>{const el=$("#vstat");if(!el)return;el.textContent=state==="start"?t("vsStart")+(v?" ("+v.name+")":""):state==="end"?t("vsEnd"):state==="retry"?t("vsRetry",v?v.name:"?"):state==="fail"?t("vsFail"):t("vsErr",info||"?");});
+  const sel=$("#vsel");if(sel)sel.onchange=()=>{store.settings.voice=sel.value||null;if(sel.value)badV.delete(sel.value);save();renderVoiceBox();test();};
+  const tb=$("#vtest");if(tb)tb.onclick=test;
 }
 /* ================= Progress ================= */
 function renderProgress(){
