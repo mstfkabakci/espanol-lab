@@ -200,6 +200,21 @@ table.conj b{color:var(--accent)}
 .rpara.single{grid-template-columns:1fr;cursor:pointer}
 .rpara.hide .tl2{display:none}
 .rpara.hide.open .tl2{display:block;padding-left:42px}
+.tw{cursor:pointer;border-radius:4px;transition:background .12s;-webkit-tap-highlight-color:transparent}
+.tw:hover{background:var(--gold-soft)}
+.tw.saved{text-decoration:underline dotted var(--accent);text-decoration-thickness:2px;text-underline-offset:4px}
+.tw.sel{background:var(--accent);color:#fff;text-decoration:none}
+.pbtns{display:flex;flex-direction:column;gap:6px;flex:none}
+.sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;width:min(560px,calc(100% - 24px));z-index:40;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:10px;animation:up .18s ease-out}
+@keyframes up{from{transform:translate(-50%,16px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.shead{display:flex;align-items:flex-start;gap:10px}
+.shead .x{margin-left:auto;border:none;background:none;font-size:18px;color:var(--muted);padding:2px 6px}
+.sword{font-family:Fraunces,serif;font-size:24px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sprev{font-weight:600;min-height:1em}
+.sctx{color:var(--muted);font-size:14px;font-style:italic}
+.btn.sm{padding:8px 12px;font-size:14px}
+.sheet .btns{align-items:center}
+@media (max-width:760px){.sheet{bottom:calc(76px + env(safe-area-inset-bottom))}}
 .wrow{color:inherit;text-decoration:none}
 .wrow:hover{background:color-mix(in srgb,var(--gold-soft) 60%,transparent)}
 .wdots{margin-left:auto;color:var(--accent);font-size:12px;letter-spacing:1px;white-space:nowrap}
@@ -861,6 +876,7 @@ function route(){
   if(!TABS.some(x=>x[0]===tab))tab="tenses";
   document.querySelectorAll("#tabs a").forEach(a=>a.classList.toggle("on",a.dataset.t===tab));
   if(canSpeak)try{speechSynthesis.cancel();}catch(e){}
+  closeSheet();
   phrState.deck=null;phrState.custom=null;phrState.pq=null;
   window.scrollTo(0,0);
   if(tab==="practice"){renderPractice(h.slice(9));return;}
@@ -1581,6 +1597,7 @@ function readPair(){
   return p;
 }
 function renderStory(s){
+  closeSheet();const keys=savedKeySet();STOK=[];
   const pair=readPair();const L2=LANG.toUpperCase();
   const pairs=[["en","ES | EN"],...(SEC()?[[LANG,"ES | "+L2]]:[]),["es",t("pairEsOnly")]];
   const isMine=myStories().some(x=>x.id===s.id),isTmp=s.id==="tmp";
@@ -1592,15 +1609,17 @@ function renderStory(s){
     <div class="btns">${canSpeak?`<button class="btn ghost" id="rAll">${t("readAll")}</button>`:""}</div></div>
   <div class="toolbar"><div class="seg">${pairs.map(([k,l])=>`<button class="${pair===k?"on":""}" data-pair="${k}">${l}</button>`).join("")}</div>
     ${pair==="es"?`<span class="muted" style="font-size:14px">${t("tapReveal")}</span>`:""}</div>
+  <p class="muted" style="font-size:13.5px;margin:0 0 8px">${t("tapWordHint")}</p>
   <div class="card story">${s.paras.map((p,i)=>`<div class="rpara ${pair==="es"?"single hide":""}" data-i="${i}">
-     <div class="es">${spk(p.es)}<span>${esc(p.es)}</span></div>
+     <div class="es"><div class="pbtns">${spk(p.es)}${pair==="es"?`<button class="spk tgl" aria-label="translation">👁</button>`:""}</div><span class="ptext">${storyParaHTML(p.es,i,keys)}</span></div>
      <div class="tl2">${pair==="es"?transLines(p):esc(pair==="en"?p.en:(secOf(p)||p.en))}</div></div>`).join("")}</div>
   ${vocab.length?`<div class="sec"><h2>${t("vocab")}</h2><div class="card tblwrap"><table class="conj vocab">${vocab.map(v=>`<tr><td><b>${esc(v.es)}</b></td><td>🇬🇧 ${esc(v.en||"")}</td>${secOf(v)?`<td>${LANGS[LANG].flag} ${esc(secOf(v))}</td>`:""}</tr>`).join("")}</table></div></div>`:""}
   ${s.quiz&&s.quiz.length?`<div class="sec"><h2>${t("compTest")}</h2><div class="card quiz" id="quiz"><button class="btn" id="stTest">${t("startTest",s.quiz.length)}</button></div></div>`:""}
   ${isTmp?`<div class="btns mt"><button class="btn" id="stSave">${t("saveStory")}</button></div>`:""}
   ${isMine?`<div class="btns mt"><button class="btn ghost" id="stDel">${t("deleteStory")}</button></div>`:""}`;
   document.querySelectorAll("[data-pair]").forEach(b=>b.onclick=()=>{store.settings.rpair=b.dataset.pair;save();if(canSpeak)try{speechSynthesis.cancel();}catch(e){}renderStory(s);});
-  document.querySelectorAll(".rpara.hide").forEach(r=>r.onclick=e=>{if(e.target.closest("[data-say]"))return;r.classList.toggle("open");});
+  document.querySelectorAll(".rpara.hide .tgl").forEach(b=>b.onclick=()=>b.closest(".rpara").classList.toggle("open"));
+  $(".story").addEventListener("click",e=>{const sp=e.target.closest(".tw");if(sp)openSheet(s,+sp.dataset.p,+sp.dataset.i);});
   const ra=$("#rAll");
   if(ra){readingAloud=false;ra.onclick=()=>{
     if(readingAloud){try{speechSynthesis.cancel();}catch(e){}readingAloud=false;ra.textContent=t("readAll");return;}
@@ -1914,24 +1933,28 @@ async function lookupWord(word){
   try{const w=await lookupWeb(word);return w?{w,status:"ok"}:{w:null,status:"notfound"};}
   catch(e){return {w:null,status:navigator.onLine===false?"offline":"notfound"};}
 }
-async function addWord(raw){
-  const word=raw.trim().replace(/\s+/g," ");if(!word)return;
+async function createWord(raw,extra={}){
+  const word=raw.trim().replace(/\s+/g," ");if(!word)return {status:"empty"};
   const dup=wordsList().find(w=>wkey(w.es)===wkey(word)||wkey(w.typed||"")===wkey(word));
-  if(dup){wordFlash=t("already");goWord(dup.id);return;}
+  if(dup)return {w:dup,dup:true};
+  const {w,status}=await lookupWord(word);
+  if(w){const d2=wordsList().find(x=>wkey(x.es)===wkey(w.es));if(d2)return {w:d2,dup:true};}
+  const nw=w?Object.assign({id:"w"+Date.now().toString(36),added:Date.now(),note:"",st:newStats()},w)
+    :{id:"w"+Date.now().toString(36),es:word,typed:word,pos:"",gender:"",m:{},usage:{},forms:"",ex:[],src:"manual",pending:true,added:Date.now(),note:"",st:newStats()};
+  if(extra.note)nw.note=extra.note;
+  if(extra.example&&extra.example.es&&!(nw.ex||[]).some(x=>x.es===extra.example.es))nw.ex=[...(nw.ex||[]),extra.example];
+  store.words=[nw,...wordsList()];save();
+  return {w:nw,status:w?"ok":status,created:true};
+}
+async function addWord(raw){
+  const word=raw.trim();if(!word)return;
   const inp=$("#wIn"),btn=$("#wGo"),st=$("#wS");
   if(inp)inp.disabled=true;if(btn)btn.disabled=true;if(st){st.className="status";st.innerHTML=`<span class="spin"></span>${t("looking")}`;}
-  const {w,status}=await lookupWord(word);
-  let nw;
-  if(w){
-    const d2=wordsList().find(x=>wkey(x.es)===wkey(w.es));
-    if(d2){wordFlash=t("already");goWord(d2.id);return;}
-    nw=Object.assign({id:"w"+Date.now().toString(36),added:Date.now(),note:"",st:newStats()},w);
-  }else{
-    nw={id:"w"+Date.now().toString(36),es:word,typed:word,pos:"",gender:"",m:{},usage:{},forms:"",ex:[],src:"manual",pending:true,added:Date.now(),note:"",st:newStats()};
-    wordFlash=status==="offline"?t("offline"):t("notFound");wordEdit=true;
-  }
-  store.words=[nw,...wordsList()];save();
-  goWord(nw.id);
+  const r=await createWord(word);
+  if(!r.w)return;
+  if(r.dup)wordFlash=t("already");
+  else if(r.status!=="ok"){wordFlash=r.status==="offline"?t("offline"):t("notFound");wordEdit=true;}
+  goWord(r.w.id);
 }
 function goWord(id){const h="#w-"+id;if(location.hash===h)route();else location.hash=h;}
 
@@ -2118,6 +2141,95 @@ function startWordCards(){
     $("#cNo").onclick=()=>{markWord(w.id,false);i++;flip=false;draw();};
   };
   draw();z.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ================= Stories: tap a word to add it to My words ================= */
+Object.assign(T.en,{tapWordHint:"Tip: tap any word in the story to add it to My words.",addToWords:"➕ Add to My words",inList:"✓ Already in My words",
+openWord:"Open",addedWord:"✓ Added: {0}",addedNoMeaning:"Saved. No meaning found yet; open it to write one yourself.",
+extL:"+ word before",extR:"+ word after",tapReveal:"Tap 👁 next to a paragraph to see its translation."});
+Object.assign(T.tr,{tapWordHint:"İpucu: Hikâyede herhangi bir kelimeye dokun, Kelimelerim'e ekle.",addToWords:"➕ Kelimelerime ekle",inList:"✓ Zaten Kelimelerim'de",
+openWord:"Aç",addedWord:"✓ Eklendi: {0}",addedNoMeaning:"Kaydedildi. Anlamı henüz bulunamadı, açıp kendin yazabilirsin.",
+extL:"+ önceki kelime",extR:"+ sonraki kelime",tapReveal:"Bir paragrafın çevirisini görmek için yanındaki 👁'e dokun."});
+Object.assign(T.de,{tapWordHint:"Tipp: Tippe auf ein Wort in der Geschichte, um es zu „Meine Wörter“ hinzuzufügen.",addToWords:"➕ Zu meinen Wörtern",inList:"✓ Schon in „Meine Wörter“",
+openWord:"Öffnen",addedWord:"✓ Hinzugefügt: {0}",addedNoMeaning:"Gespeichert. Noch keine Bedeutung gefunden; öffne es, um selbst eine einzutragen.",
+extL:"+ Wort davor",extR:"+ Wort danach",tapReveal:"Tippe neben einem Absatz auf 👁, um die Übersetzung zu sehen."});
+
+let STOK=[],storySel=null;const PREV=new Map();
+function tokenize(text){
+  const out=[];const re=/\p{L}+(?:['’]\p{L}+)?/gu;let last=0,m;
+  while((m=re.exec(text))){
+    if(m.index>last)out.push({t:text.slice(last,m.index),w:false,s:last,e:m.index});
+    out.push({t:m[0],w:true,s:m.index,e:m.index+m[0].length});last=re.lastIndex;
+  }
+  if(last<text.length)out.push({t:text.slice(last),w:false,s:last,e:text.length});
+  return out;
+}
+const savedKeySet=()=>{const s=new Set();wordsList().forEach(w=>{s.add(wkey(w.es));if(w.typed)s.add(wkey(w.typed));});return s;};
+function storyParaHTML(text,pi,keys){
+  const toks=tokenize(text);STOK[pi]=toks;
+  return toks.map((k,ti)=>k.w?`<span class="tw${keys.has(wkey(k.t))?" saved":""}" data-p="${pi}" data-i="${ti}">${esc(k.t)}</span>`:esc(k.t)).join("");
+}
+function refreshSavedMarks(){const keys=savedKeySet();document.querySelectorAll(".tw").forEach(e=>e.classList.toggle("saved",keys.has(wkey(e.textContent))));}
+function selText(){const {s,p,i,j}=storySel;const toks=STOK[p];return s.paras[p].es.slice(toks[i].s,toks[j].e);}
+function selSentence(){
+  const {s,p,i}=storySel;const txt=s.paras[p].es;const pos=STOK[p][i].s;
+  const re=/[^.!?…]+[.!?…]*[»”"]?\s*/g;let m;
+  while((m=re.exec(txt))){if(pos>=m.index&&pos<m.index+m[0].length)return m[0].trim();}
+  return txt;
+}
+function highlightSel(){
+  document.querySelectorAll(".tw.sel").forEach(e=>e.classList.remove("sel"));
+  if(!storySel)return;const {p,i,j}=storySel;
+  for(let k=i;k<=j;k++){const e=document.querySelector(`.tw[data-p="${p}"][data-i="${k}"]`);if(e)e.classList.add("sel");}
+}
+function closeSheet(){storySel=null;highlightSel();const sh=document.getElementById("sheet");if(sh)sh.remove();}
+function openSheet(s,p,i){
+  storySel={s,p,i,j:i};renderSheet();
+  const sp=document.querySelector(".tw.sel"),sh=document.querySelector(".sheet");
+  if(sp&&sh){const r=sp.getBoundingClientRect(),q=sh.getBoundingClientRect();if(r.bottom>q.top-8)window.scrollBy({top:r.bottom-q.top+48,behavior:"smooth"});}
+}
+function selWordCount(){const {p,i,j}=storySel;return STOK[p].slice(i,j+1).filter(k=>k.w).length;}
+function renderSheet(){
+  if(!storySel)return;
+  let sh=document.getElementById("sheet");
+  if(!sh){sh=document.createElement("div");sh.id="sheet";document.body.appendChild(sh);}
+  const phrase=selText(),k=wkey(phrase);
+  const have=wordsList().find(w=>wkey(w.es)===k||wkey(w.typed||"")===k);
+  sh.innerHTML=`<div class="sheet card" role="dialog">
+    <div class="shead"><div class="sword">${esc(phrase)} ${spk(phrase)}</div><button class="x" id="sX" aria-label="close">✕</button></div>
+    <div class="sprev" id="sPrev">${have?esc(wPrim(have)):""}</div>
+    <div class="sctx">“${esc(selSentence())}”</div>
+    <div class="btns"><button class="btn ghost sm" id="sL">${t("extL")}</button><button class="btn ghost sm" id="sR">${t("extR")}</button></div>
+    <div class="btns" id="sAct">${have?`<span class="pill ok">${t("inList")}</span><a class="btn ghost sm" href="#w-${have.id}">${t("openWord")}</a>`:`<button class="btn" id="sAdd">${t("addToWords")}</button>`}</div>
+    <div class="status" id="sS"></div></div>`;
+  highlightSel();
+  $("#sX").onclick=closeSheet;
+  $("#sL").onclick=()=>{const toks=STOK[storySel.p];for(let x=storySel.i-1;x>=0;x--)if(toks[x].w){if(selWordCount()<6)storySel.i=x;break;}renderSheet();};
+  $("#sR").onclick=()=>{const toks=STOK[storySel.p];for(let x=storySel.j+1;x<toks.length;x++)if(toks[x].w){if(selWordCount()<6)storySel.j=x;break;}renderSheet();};
+  const add=$("#sAdd");
+  if(add)add.onclick=async()=>{
+    const ph=phrase,sent=selSentence(),title=storySel.s.title;
+    add.disabled=true;const st=$("#sS");st.className="status";st.innerHTML=`<span class="spin"></span>${t("looking")}`;
+    const r=await createWord(ph,{note:`📖 ${title}: «${sent}»`,example:{es:sent}});
+    const st2=$("#sS");if(!st2||!storySel||selText()!==ph)return refreshSavedMarks();
+    const a=$("#sAct");if(a)a.innerHTML="";
+    st2.className="status";
+    const link=r.w?` · <a href="#w-${r.w.id}">${t("openWord")}</a>`:"";
+    st2.innerHTML=(r.dup?t("inList"):r.status==="ok"?esc(t("addedWord",r.w.es+" — "+wPrim(r.w))):esc(t("addedNoMeaning")))+link;
+    if(r.w&&wPrim(r.w))$("#sPrev").textContent=wPrim(r.w);
+    refreshSavedMarks();
+  };
+  if(!have)quickPreview(phrase);
+}
+async function quickPreview(phrase){
+  const box=$("#sPrev");
+  if(PREV.has(phrase)){if(box)box.textContent=PREV.get(phrase);return;}
+  if(sampleFn||navigator.onLine===false)return;
+  if(box)box.innerHTML=`<span class="spin"></span>`;
+  let txt="";
+  try{const r=await wikt(phrase.toLowerCase());if(r){const p=parseWikt(r);txt=p.defs.length?"🇬🇧 "+p.defs.slice(0,2).join("; "):p.formText?"🇬🇧 "+p.formText:"";}}catch(e){}
+  PREV.set(phrase,txt);
+  if(storySel&&selText()===phrase){const b=$("#sPrev");if(b)b.textContent=txt;}
 }
 
 /* ================= Progress ================= */
