@@ -407,7 +407,16 @@ function rankV(v){const l=vlang(v).toLowerCase();let r=l==="es-es"?100:50;if(GOO
 function pickEs(){const list=esVoices();if(!list.length)return null;const want=store.settings&&store.settings.voice;if(want){const w=list.find(v=>v.voiceURI===want||v.name===want);if(w)return w;}return list.slice().sort((a,b)=>rankV(b)-rankV(a))[0];}
 if(canSpeak){loadVoices();try{speechSynthesis.addEventListener("voiceschanged",loadVoices);}catch(e){try{speechSynthesis.onvoiceschanged=loadVoices;}catch(_){}}[300,1000,3000].forEach(ms=>setTimeout(loadVoices,ms));}
 let voiceWarned=false;
-function warnNoVoice(){if(voiceWarned||!voices.length)return;voiceWarned=true;toast(t("noEsVoice"),9000);}
+const T0=Date.now();
+function warnNoVoice(){if(voiceWarned||(!voices.length&&Date.now()-T0<2500))return;voiceWarned=true;toast(`${t("noEsVoice")} <a href="#progress" onclick="setTimeout(()=>{const b=document.getElementById('vbox');b&&b.scrollIntoView({block:'center'});},300)" style="color:#ffd27a">${t("voiceFix")}</a>`,12000);}
+function platformHelp(){
+  const ua=navigator.userAgent||"";
+  const ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  let h=ios?t("voiceHelpIOS"):/Android/.test(ua)?t("voiceHelpAndroid"):/Windows/.test(ua)?t("voiceHelpWin"):/Macintosh/.test(ua)?t("voiceHelpMac"):t("voiceHelpOther");
+  if(!ios&&/Firefox\//.test(ua))h+=" "+t("voiceHelpFF");
+  if(/Electron\//.test(ua))h+=" "+t("voiceHelpApp");
+  return h;
+}
 function mkUtt(s,rate){
   const u=new SpeechSynthesisUtterance(s.replace(/_+/g," "));
   const v=pickEs();
@@ -3606,18 +3615,18 @@ quiz:[
 );
 
 /* ================= Voice settings ================= */
-Object.assign(T.en,{voiceTitle:"🔊 Read-aloud voice",voiceCur:"Spanish voice in use:",voicePick:"Choose another Spanish voice",voiceTest:"▶ Test",voiceSample:"Hola, esto es una prueba. ¿Me entiendes bien?",
- noEsVoice:"This device isn't offering a Spanish voice, so the text may be read with an English accent. See Progress → 🔊 Read-aloud voice.",
+Object.assign(T.en,{voiceHelpWin:"On a Windows computer the easiest fix is to open this page in Microsoft Edge or Google Chrome: both come with Spanish voices. Or add one to Windows: Settings → Time & language → Speech → Manage voices → Add voices → Español (España), then restart the browser.",voiceHelpMac:"On a Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices… → Spanish (Spain), then restart the browser.",voiceHelpAndroid:"On Android: Settings → Accessibility → Text-to-speech output → Google (⚙) → Install voice data → Spanish (Spain).",voiceHelpOther:"Open this page in Google Chrome or Microsoft Edge, which come with Spanish voices.",voiceHelpFF:"Firefox only uses the voices installed on the computer.",voiceHelpApp:"Inside the Claude desktop app only the computer's own voices are available; open the page in Chrome or Edge instead.",voiceDiag:"This browser offers {0} voice(s), none of them Spanish: {1}.",voiceTitle:"🔊 Read-aloud voice",voiceCur:"Spanish voice in use:",voicePick:"Choose another Spanish voice",voiceTest:"▶ Test",voiceSample:"Hola, esto es una prueba. ¿Me entiendes bien?",
+ noEsVoice:"This browser has no Spanish voice, so Spanish is read with an English voice.",voiceFix:"How to fix it →",
  voiceNone:"No Spanish voice was found on this device, so the text will be read with the default (English) voice.",
  voiceHelpIOS:"On iPhone: Settings → Accessibility → Spoken Content → Voices → Spanish, and download a voice (e.g. Mónica). Then close the app completely and open it again.",
  voiceNoSpeech:"This browser can't read text aloud.",voiceWait:"Looking for voices…",voiceAuto:"(automatic)"});
-Object.assign(T.tr,{voiceTitle:"🔊 Sesli okuma",voiceCur:"Kullanılan İspanyolca ses:",voicePick:"Başka bir İspanyolca ses seç",voiceTest:"▶ Dene",
- noEsVoice:"Bu cihaz İspanyolca bir ses sunmuyor, bu yüzden metin İngilizce aksanla okunabilir. Çözüm için: İlerleme → 🔊 Sesli okuma.",
+Object.assign(T.tr,{voiceHelpWin:"Windows bilgisayarda en kolay çözüm bu sayfayı Microsoft Edge ya da Google Chrome'da açmak: ikisinde de İspanyolca ses hazır geliyor. Ya da Windows'a ses ekle: Ayarlar → Zaman ve dil → Konuşma → Sesleri yönet → Ses ekle → Español (España), sonra tarayıcıyı yeniden başlat.",voiceHelpMac:"Mac'te: Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik → Sistem sesi → Sesleri Yönet… → İspanyolca (İspanya), sonra tarayıcıyı yeniden başlat.",voiceHelpAndroid:"Android'de: Ayarlar → Erişilebilirlik → Metin okuma çıkışı → Google (⚙) → Ses verilerini yükle → İspanyolca (İspanya).",voiceHelpOther:"Bu sayfayı İspanyolca sesleri hazır gelen Google Chrome ya da Microsoft Edge'de aç.",voiceHelpFF:"Firefox yalnızca bilgisayarda yüklü sesleri kullanıyor.",voiceHelpApp:"Claude masaüstü uygulamasının içinde yalnızca bilgisayarın kendi sesleri kullanılabiliyor; sayfayı Chrome ya da Edge'de aç.",voiceDiag:"Bu tarayıcıda {0} ses var, hiçbiri İspanyolca değil: {1}.",voiceTitle:"🔊 Sesli okuma",voiceCur:"Kullanılan İspanyolca ses:",voicePick:"Başka bir İspanyolca ses seç",voiceTest:"▶ Dene",
+ noEsVoice:"Bu tarayıcıda İspanyolca ses yok, bu yüzden İspanyolca metin İngilizce sesle okunuyor.",voiceFix:"Nasıl düzeltilir →",
  voiceNone:"Bu cihazda İspanyolca ses bulunamadı; metin varsayılan (İngilizce) sesle okunur.",
  voiceHelpIOS:"iPhone'da: Ayarlar → Erişilebilirlik → Seslendirilen İçerik → Sesler → İspanyolca yolundan bir ses indir (ör. Mónica). Sonra uygulamayı tamamen kapatıp yeniden aç.",
  voiceNoSpeech:"Bu tarayıcı sesli okuma yapamıyor.",voiceWait:"Sesler aranıyor…",voiceAuto:"(otomatik)"});
-Object.assign(T.de,{voiceTitle:"🔊 Vorlesestimme",voiceCur:"Verwendete spanische Stimme:",voicePick:"Andere spanische Stimme wählen",voiceTest:"▶ Testen",
- noEsVoice:"Dieses Gerät bietet keine spanische Stimme an, daher wird der Text evtl. mit englischem Akzent gelesen. Siehe Fortschritt → 🔊 Vorlesestimme.",
+Object.assign(T.de,{voiceHelpWin:"Auf einem Windows-PC ist es am einfachsten, diese Seite in Microsoft Edge oder Google Chrome zu öffnen: Beide bringen spanische Stimmen mit. Oder füge Windows eine Stimme hinzu: Einstellungen → Zeit und Sprache → Sprache → Stimmen verwalten → Stimmen hinzufügen → Español (España), dann den Browser neu starten.",voiceHelpMac:"Auf dem Mac: Systemeinstellungen → Bedienungshilfen → Gesprochene Inhalte → Systemstimme → Stimmen verwalten … → Spanisch (Spanien), dann den Browser neu starten.",voiceHelpAndroid:"Auf Android: Einstellungen → Bedienungshilfen → Sprachausgabe → Google (⚙) → Sprachdaten installieren → Spanisch (Spanien).",voiceHelpOther:"Öffne diese Seite in Google Chrome oder Microsoft Edge, die spanische Stimmen mitbringen.",voiceHelpFF:"Firefox nutzt nur die auf dem Computer installierten Stimmen.",voiceHelpApp:"In der Claude-Desktop-App sind nur die Stimmen des Computers verfügbar; öffne die Seite lieber in Chrome oder Edge.",voiceDiag:"Dieser Browser bietet {0} Stimme(n), keine davon spanisch: {1}.",voiceTitle:"🔊 Vorlesestimme",voiceCur:"Verwendete spanische Stimme:",voicePick:"Andere spanische Stimme wählen",voiceTest:"▶ Testen",
+ noEsVoice:"Dieser Browser hat keine spanische Stimme, deshalb wird Spanisch mit einer englischen Stimme gelesen.",voiceFix:"So behebst du es →",
  voiceNone:"Auf diesem Gerät wurde keine spanische Stimme gefunden; der Text wird mit der Standardstimme (Englisch) gelesen.",
  voiceHelpIOS:"Auf dem iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Spanisch, und eine Stimme laden (z. B. Mónica). Danach die App ganz schließen und neu öffnen.",
  voiceNoSpeech:"Dieser Browser kann keinen Text vorlesen.",voiceWait:"Stimmen werden gesucht …",voiceAuto:"(automatisch)"});
@@ -3631,8 +3640,8 @@ function renderVoiceBox(tries){
    <label class="muted" style="display:block;margin-top:10px;font-size:13.5px">${t("voicePick")}</label>
    <select id="vsel"><option value="">${t("voiceAuto")}</option>${list.map(v=>`<option value="${esc(v.voiceURI||v.name)}" ${store.settings.voice&&(store.settings.voice===v.voiceURI||store.settings.voice===v.name)?"selected":""}>${esc(v.name)} · ${esc(vlang(v))}</option>`).join("")}</select>
    <button class="btn" id="vtest">${t("voiceTest")}</button>
-   <p class="muted" style="font-size:13px;margin:12px 0 0">${t("voiceHelpIOS")}</p>`
-  :`<p style="margin:0 0 8px">${t("voiceNone")}</p><p class="muted" style="font-size:13.5px;margin:0">${t("voiceHelpIOS")}</p>`;
+   <p class="muted" style="font-size:13px;margin:12px 0 0">${platformHelp()}</p>`
+  :`<p style="margin:0 0 8px">${t("voiceNone")}</p>${voices.length?`<p class="muted" style="font-size:13px;margin:0 0 8px">${t("voiceDiag",voices.length,esc(voices.slice(0,6).map(v=>v.name).join(", "))+(voices.length>6?"…":""))}</p>`:""}<p style="font-size:14.5px;margin:0">${platformHelp()}</p>`;
   const sel=$("#vsel");if(sel)sel.onchange=()=>{store.settings.voice=sel.value||null;save();renderVoiceBox();speak(T.en.voiceSample);};
   const tb=$("#vtest");if(tb)tb.onclick=()=>speak(T.en.voiceSample);
 }
