@@ -200,6 +200,21 @@ table.conj b{color:var(--accent)}
 .rpara.single{grid-template-columns:1fr;cursor:pointer}
 .rpara.hide .tl2{display:none}
 .rpara.hide.open .tl2{display:block;padding-left:42px}
+.wrow{color:inherit;text-decoration:none}
+.wrow:hover{background:color-mix(in srgb,var(--gold-soft) 60%,transparent)}
+.wdots{margin-left:auto;color:var(--accent);font-size:12px;letter-spacing:1px;white-space:nowrap}
+.wdots.big{font-size:15px}
+.wcard{padding:20px 22px}
+.whead{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.wword{font-size:32px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;word-break:break-word}
+.wsec{margin-top:18px;display:flex;flex-direction:column;gap:6px}
+.wsec h3{font-family:Inter,sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.wsec p{margin:0}
+.wmean{font-size:17px;font-weight:600}
+textarea.note{width:100%;min-height:70px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font:inherit;color:var(--ink);resize:vertical}
+.exportbox{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+.exportbox summary{cursor:pointer;font-weight:700}
+.exportbox p{margin:6px 0}
 .linkish{display:inline-block;margin-top:8px;color:var(--accent);font-weight:600;font-size:14px;text-decoration:none}
 table.vocab td:first-child{width:auto;color:var(--ink)}
 @media (max-width:700px){.rpara{grid-template-columns:1fr;gap:6px}.rpara .tl2{padding-left:42px}}
@@ -208,7 +223,7 @@ nav.tabs a .ti{display:none}
 header.top{padding-top:env(safe-area-inset-top)}
 @media (max-width:760px){
   nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;border:none;border-top:1px solid var(--line);border-radius:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around;gap:0;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);overflow:visible}
-  nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;padding:4px 2px;font-size:10.5px;border-radius:10px}
+  nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;padding:4px 1px;font-size:10px;border-radius:10px}
   nav.tabs a .ti{display:block;font-size:20px;line-height:1;filter:grayscale(1);opacity:.7}
   nav.tabs a .tlab{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   nav.tabs a.on{background:none;color:var(--accent)}
@@ -360,7 +375,7 @@ function speak(s){
   }catch(e){}
 }
 const spk=s=>canSpeak?`<button class="spk" title="▶" data-say="${esc(s)}">🔊</button>`:"";
-document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(b){e.stopPropagation();speak(b.dataset.say);}});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(b){e.preventDefault();e.stopPropagation();speak(b.dataset.say);}});
 
 function endTable(sets){
   const head=`<tr><th></th>${sets.map(s=>`<th>${s[0]}</th>`).join("")}</tr>`;
@@ -831,7 +846,7 @@ function conj(inf,tn){
 
 /* ================= Header & router ================= */
 let quiz=null, phrState={cat:"all",mode:"list",q:"",deck:null,idx:0,flip:false,dir:"es",pq:null,custom:null}, drillState=null;
-const TABS=[["tenses","tabTenses","⏳"],["phrases","tabPhrases","💬"],["reading","tabReading","📖"],["practice","tabPractice","♾️"],["drill","tabDrill","🔤"],["progress","tabProgress","📈"]];
+const TABS=[["tenses","tabTenses","⏳"],["phrases","tabPhrases","💬"],["reading","tabReading","📖"],["words","tabWords","📝"],["practice","tabPractice","♾️"],["drill","tabDrill","🔤"],["progress","tabProgress","📈"]];
 function renderHeader(){
   document.documentElement.lang=LANG;
   const sel=$("#langSel");
@@ -842,7 +857,7 @@ function renderHeader(){
 $("#langSel").onchange=e=>{LANG=e.target.value;store.settings.lang=LANG;save();renderHeader();route();};
 function route(){
   const h=(location.hash||"#tenses").slice(1);
-  let tab=h.startsWith("l-")?"tenses":h.startsWith("practice")?"practice":h.startsWith("r-")?"reading":h;
+  let tab=h.startsWith("l-")?"tenses":h.startsWith("practice")?"practice":h.startsWith("r-")?"reading":h.startsWith("w-")?"words":h;
   if(!TABS.some(x=>x[0]===tab))tab="tenses";
   document.querySelectorAll("#tabs a").forEach(a=>a.classList.toggle("on",a.dataset.t===tab));
   if(canSpeak)try{speechSynthesis.cancel();}catch(e){}
@@ -851,7 +866,9 @@ function route(){
   if(tab==="practice"){renderPractice(h.slice(9));return;}
   if(h.startsWith("l-")){const L=LESSONS.find(l=>"l-"+l.id===h);if(L){renderLesson(L,"explain");return;}}
   if(h.startsWith("r-")){const S=findStory(h.slice(2));if(S){renderStory(S);return;}}
-  ({tenses:renderTenses,phrases:renderPhrases,reading:renderReading,drill:renderDrill,progress:renderProgress})[tab]();
+  if(!h.startsWith("w-"))wordEdit=false;
+  if(h.startsWith("w-")){const W=findWord(h.slice(2));if(W){renderWord(W);return;}}
+  ({tenses:renderTenses,phrases:renderPhrases,reading:renderReading,words:renderWords,drill:renderDrill,progress:renderProgress})[tab]();
 }
 window.addEventListener("hashchange",route);
 
@@ -943,6 +960,7 @@ function answerMC(k){
 function finishQ(ok,q,correct,accentNote,given){
   quiz.answered=true;
   if(ok)quiz.score++;else quiz.wrong.push({q,given});
+  if(quiz.L.onAnswer)try{quiz.L.onAnswer(q,ok);}catch(e){}
   const full=fillSentence(q,correct);
   $("#fb").innerHTML=`<div class="fb ${ok?"ok":"bad"}"><div class="h">${ok?(accentNote?t("okAccent"):"¡Correcto!"):t("rightAnswer")+esc(correct)}</div>
    ${accentNote?`<div>${t("rightSpelling")} <b>${esc(correct)}</b></div>`:""}<div>${tx(q.ex)}</div>
@@ -1189,9 +1207,9 @@ let sampleFn; // undefined = checking, null = unavailable
     for(let i=0;i<30&&!(window.claude&&window.claude.use);i++)await new Promise(r=>setTimeout(r,100));
     sampleFn=window.claude&&window.claude.use?await window.claude.use("sample"):null;
   }catch(e){sampleFn=null;}
-  renderAI();renderAIStory();
+  renderAI();renderAIStory();renderWordSrc();
 })();
-setTimeout(()=>{if(sampleFn===undefined){sampleFn=null;renderAI();renderAIStory();}},12000);
+setTimeout(()=>{if(sampleFn===undefined){sampleFn=null;renderAI();renderAIStory();renderWordSrc();}},12000);
 function parseJSON(s){if(typeof s!=="string")return s;const a=s.indexOf("{"),b=s.lastIndexOf("}");if(a<0||b<0)throw {code:"parse",message:t("aiParse")};return JSON.parse(s.slice(a,b+1));}
 async function askClaude(prompt){
   let v;
@@ -1707,6 +1725,401 @@ saveStory:"⭐ In meinen Geschichten speichern",savedStory:"Gespeichert ✓",del
 /* German content translations, keyed by the English text */
 TRANSL.de={"Present: now and habits": "Gegenwart: jetzt und Gewohnheiten", "simple present / present continuous": "Präsens", "Describes what is happening now, habits and general truths. It covers the English <b>simple present<\/b> (I work) and often the <b>present continuous<\/b> (I'm working). It's also used for fixed plans in the near future.": "Beschreibt, was gerade passiert, Gewohnheiten und allgemeine Wahrheiten. Es entspricht dem deutschen <b>Präsens<\/b> (ich arbeite) und wird auch für die englische Verlaufsform verwendet (I'm working). Außerdem steht es für feste Pläne in naher Zukunft.", "Regular verbs": "Regelmäßige Verben", "Key irregularities": "Wichtige Unregelmäßigkeiten", "Only yo is irregular": "Nur yo ist unregelmäßig", "Stem change e → ie": "Stammwechsel e → ie", "querer → <b>quiero<\/b>, pensar → <b>pienso<\/b>, empezar → <b>empiezo<\/b>. nosotros and vosotros don't change: queremos, queréis.": "querer → <b>quiero<\/b>, pensar → <b>pienso<\/b>, empezar → <b>empiezo<\/b>. nosotros und vosotros ändern sich nicht: queremos, queréis.", "Stem change o → ue": "Stammwechsel o → ue", "Stem change e → i": "Stammwechsel e → i", "Completely irregular": "Völlig unregelmäßig", "Habits and routines": "Gewohnheiten und Routinen", "Things you do regularly.": "Dinge, die du regelmäßig tust.", "I work in an office downtown.": "Ich arbeite in einem Büro in der Innenstadt.", "On Tuesdays I go to Spanish class.": "Dienstags gehe ich zum Spanischkurs.", "Happening now": "Was gerade passiert", "Things happening as you speak. For emphasis use estar + gerund.": "Dinge, die im Moment des Sprechens passieren. Zur Betonung verwendet man estar + Gerundium.", "What are you doing? — I'm having dinner with friends.": "Was machst du? — Ich esse mit Freunden zu Abend.", "I'm working right now, I'll call you later.": "Ich arbeite gerade, ich rufe dich später an.", "Near future": "Nahe Zukunft", "For fixed plans.": "Für feste Pläne.", "Tomorrow I'm going to the doctor.": "Morgen gehe ich zum Arzt.", "General truths": "Allgemeine Wahrheiten", "Things that are always true.": "Dinge, die immer gelten.", "In Madrid it's very hot in summer.": "In Madrid ist es im Sommer sehr heiß.", "<b>Estar + gerundio<\/b> (estoy comiendo, estás leyendo) stresses “right now”. Gerund: -ar → <b>-ando<\/b>, -er/-ir → <b>-iendo<\/b>.": "<b>Estar + gerundio<\/b> (estoy comiendo, estás leyendo) betont „gerade jetzt“. Gerundium: -ar → <b>-ando<\/b>, -er/-ir → <b>-iendo<\/b>.", "The subject pronoun is usually dropped: <i>Vivo en Madrid<\/i> is enough; <i>Yo vivo…<\/i> adds emphasis.": "Das Subjektpronomen fällt meistens weg: <i>Vivo en Madrid<\/i> reicht; <i>Yo vivo…<\/i> betont die Person.", "I live in Madrid.": "Ich wohne in Madrid.", "-ir verb, yo → -o: vivo.": "Verb auf -ir, yo → -o: vivo.", "We study Spanish on Tuesdays.": "Wir lernen dienstags Spanisch.", "-ar verb, nosotros → -amos.": "Verb auf -ar, nosotros → -amos.", "Do you want a coffee?": "Möchtest du einen Kaffee?", "querer changes its stem: e → ie. tú → quieres.": "querer ändert seinen Stamm: e → ie. tú → quieres.", "I don't do anything on Sundays.": "Sonntags mache ich nichts.", "hacer is irregular only in yo: hago.": "hacer ist nur bei yo unregelmäßig: hago.", "They leave home at eight.": "Sie gehen um acht aus dem Haus.", "salir is irregular only in yo (salgo). ellos → salen.": "salir ist nur bei yo unregelmäßig (salgo). ellos → salen.", "Can you help me, please?": "Kannst du mir bitte helfen?", "poder: o → ue. tú → puedes.": "poder: o → ue. tú → puedes.", "I know a lot of people in Madrid.": "Ich kenne viele Leute in Madrid.", "Verbs ending in -cer take -zco in yo: conozco.": "Verben auf -cer bekommen bei yo -zco: conozco.", "I'm eating right now.": "Ich esse gerade.", "estar + gerund: estoy comiendo.": "estar + Gerundium: estoy comiendo.", "Today, this week, in my life": "Heute, diese Woche, in meinem Leben", "present perfect": "Perfekt (für heute / diese Woche)", "In Spain, and especially in Madrid, it's used for events <b>within a time period that isn't over yet<\/b>: hoy, esta mañana, esta semana, este año. It's also used for life experience (<i>¿Has estado en…?<\/i>) and with <i>ya / todavía no<\/i>. It looks like the English present perfect but is used more widely in Spain: <i>Hoy he comido paella<\/i> = “I had paella today”. In Latin America the indefinido is usually preferred instead.": "In Spanien, besonders in Madrid, wird es für Ereignisse <b>innerhalb eines noch nicht abgeschlossenen Zeitraums<\/b> verwendet: hoy, esta mañana, esta semana, este año. Außerdem für Lebenserfahrungen (<i>¿Has estado en…?<\/i>) und mit <i>ya / todavía no<\/i>. Es ähnelt dem deutschen Perfekt: <i>Hoy he comido paella<\/i> = „Ich habe heute Paella gegessen“. In Lateinamerika wird stattdessen meist das indefinido verwendet.", "Structure: haber + past participle": "Aufbau: haber + Partizip", "Past participle": "Partizip", "Regular": "Regelmäßig", "Irregular participles": "Unregelmäßige Partizipien", "With an accent": "Mit Akzent", "Today / this week / this year": "Heute / diese Woche / dieses Jahr", "The time period isn't over yet.": "Der Zeitraum ist noch nicht vorbei.", "I had paella today.": "Ich habe heute Paella gegessen.", "I've worked a lot this week.": "Ich habe diese Woche viel gearbeitet.", "Life experience": "Lebenserfahrung", "No specific time: “have you ever…?”": "Ohne bestimmten Zeitpunkt: „Warst du schon einmal …?“", "Have you ever been to Seville?": "Warst du schon einmal in Sevilla?", "Whether something has happened yet.": "Ob etwas schon passiert ist.", "I haven't paid the rent yet.": "Ich habe die Miete noch nicht bezahlt.", "Have you already talked to the landlord?": "Hast du schon mit dem Vermieter gesprochen?", "<b>ayer, anoche, el lunes pasado, en 2020<\/b> → indefinido. <b>hoy, esta mañana, este mes, nunca, ya<\/b> → perfecto (in Spain).": "<b>ayer, anoche, el lunes pasado, en 2020<\/b> → indefinido. <b>hoy, esta mañana, este mes, nunca, ya<\/b> → perfecto (in Spanien).", "Nothing goes between haber and the participle: <i>Lo he hecho<\/i> is correct, <i>He lo hecho<\/i> is wrong.": "Zwischen haber und Partizip steht nichts: <i>Lo he hecho<\/i> ist richtig, <i>He lo hecho<\/i> ist falsch.", "I've worked a lot today.": "Ich habe heute viel gearbeitet.", "Have you written the email yet?": "Hast du die E-Mail schon geschrieben?", "The participle of escribir is irregular: escrito.": "Das Partizip von escribir ist unregelmäßig: escrito.", "I went to the bank this morning.": "Ich bin heute Morgen zur Bank gegangen.", "“Esta mañana” is a period that isn't over yet, so in Spain you use the perfecto. (In Latin America “fui” is also common.)": "„Esta mañana“ ist ein noch nicht abgeschlossener Zeitraum, deshalb verwendet man in Spanien das perfecto. (In Lateinamerika ist auch „fui“ üblich.)", "Yesterday I went to the bank.": "Gestern bin ich zur Bank gegangen.", "“Ayer” is a finished time, so indefinido.": "„Ayer“ ist eine abgeschlossene Zeit, also indefinido.", "We haven't seen the film yet.": "Wir haben den Film noch nicht gesehen.", "ver → visto (irregular).": "ver → visto (unregelmäßig).", "Which is the past participle of hacer?": "Welches ist das Partizip von hacer?", "hacer → hecho. “haciendo” is the gerund.": "hacer → hecho. „haciendo“ ist das Gerundium.", "What has the boss said?": "Was hat der Chef gesagt?", "Finished, one-off events": "Abgeschlossene, einmalige Ereignisse", "simple past": "Präteritum / Perfekt (abgeschlossenes Ereignis)", "Used for events that <b>started and finished at a specific time<\/b> in the past. The “events” of a story, what happened and what was done, are told in this tense. It's the closest match to the English simple past.": "Wird für Ereignisse verwendet, die <b>zu einem bestimmten Zeitpunkt<\/b> in der Vergangenheit <b>begonnen und geendet haben<\/b>. Die „Ereignisse“ einer Geschichte, also was passiert ist und was getan wurde, erzählt man in dieser Zeit. Im Deutschen entspricht es meist dem Präteritum oder dem Perfekt.", "Irregularities": "Unregelmäßigkeiten", "Strong stems (no accents!)": "Starke Stämme (ohne Akzent!)", "tener → <b>tuv<\/b>- · estar → <b>estuv<\/b>- · poder → <b>pud<\/b>- · poner → <b>pus<\/b>- · saber → <b>sup<\/b>- · querer → <b>quis<\/b>- · venir → <b>vin<\/b>- · hacer → <b>hic<\/b>- (él: <b>hizo<\/b>)<br>Endings: -e, -iste, -o, -imos, -isteis, -ieron": "tener → <b>tuv<\/b>- · estar → <b>estuv<\/b>- · poder → <b>pud<\/b>- · poner → <b>pus<\/b>- · saber → <b>sup<\/b>- · querer → <b>quis<\/b>- · venir → <b>vin<\/b>- · hacer → <b>hic<\/b>- (él: <b>hizo<\/b>)<br>Endungen: -e, -iste, -o, -imos, -isteis, -ieron", "-j stems": "Stämme auf -j", "decir → <b>dije<\/b> · traer → <b>traje<\/b><br>ellos: dij<b>eron<\/b>, traj<b>eron<\/b> (no i)": "decir → <b>dije<\/b> · traer → <b>traje<\/b><br>ellos: dij<b>eron<\/b>, traj<b>eron<\/b> (ohne i)", "fui, fuiste, fue, fuimos, fuisteis, fueron. Context tells you which one it is.": "fui, fuiste, fue, fuimos, fuisteis, fueron. Welches Verb gemeint ist, ergibt sich aus dem Kontext.", "Stem change in the 3rd person (-ir)": "Stammwechsel in der 3. Person (-ir)", "Spelling change (yo)": "Schreibänderung (yo)", "A single event at a specific time": "Ein einzelnes Ereignis zu einem bestimmten Zeitpunkt", "The time is known and it's over.": "Der Zeitpunkt ist bekannt und es ist vorbei.", "Yesterday I bought a new phone.": "Gestern habe ich ein neues Handy gekauft.", "A sequence of events": "Eine Abfolge von Ereignissen", "The steps that move a story forward.": "Die Schritte, die eine Geschichte voranbringen.", "I got home, had dinner and went to bed.": "Ich bin nach Hause gekommen, habe zu Abend gegessen und bin ins Bett gegangen.", "A limited period": "Ein begrenzter Zeitraum", "A period with a clear start and end.": "Ein Zeitraum mit klarem Anfang und Ende.", "I lived in Ankara for three years.": "Ich habe drei Jahre in Ankara gewohnt.", "Key words: <b>ayer, anoche, anteayer, la semana pasada, el año pasado, en 2023, hace dos años, de repente<\/b>.": "Signalwörter: <b>ayer, anoche, anteayer, la semana pasada, el año pasado, en 2023, hace dos años, de repente<\/b>.", "The only difference between hablo (I speak) and habló (he spoke) is the accent. Getting the accent right changes the meaning here.": "Der einzige Unterschied zwischen hablo (ich spreche) und habló (er sprach) ist der Akzent. Hier verändert der Akzent die Bedeutung.", "Yesterday I talked to my mother.": "Gestern habe ich mit meiner Mutter gesprochen.", "Last night they ate pizza.": "Gestern Abend haben sie Pizza gegessen.", "Last year we went to Seville.": "Letztes Jahr sind wir nach Sevilla gefahren.", "A finished, one-off event, so indefinido: fuimos.": "Ein abgeschlossenes, einmaliges Ereignis, also indefinido: fuimos.", "What did you do at the weekend?": "Was hast du am Wochenende gemacht?", "She told me the truth.": "Sie hat mir die Wahrheit gesagt.", "Strong stems take no accent: dijo.": "Starke Stämme haben keinen Akzent: dijo.", "I arrived late to work.": "Ich bin zu spät zur Arbeit gekommen.", "-gar → -gué in yo: llegué.": "-gar → -gué bei yo: llegué.", "He slept ten hours.": "Er hat zehn Stunden geschlafen.", "-ir verbs change o → u in the 3rd person: durmió.": "Verben auf -ir ändern o → u in der 3. Person: durmió.", "We couldn't come.": "Wir konnten nicht kommen.", "Habits, descriptions, background": "Gewohnheiten, Beschreibungen, Hintergrund", "used to / would / was -ing": "„früher immer …“ / „war gerade dabei …“", "Used for past situations that were <b>habitual<\/b>, <b>ongoing<\/b> or that <b>describe the background<\/b>. When it started or ended doesn't matter. In English it usually maps to <b>used to / would<\/b> (habits) or <b>was/were + -ing<\/b> (ongoing actions).": "Wird für vergangene Situationen verwendet, die <b>gewohnheitsmäßig<\/b> waren, <b>andauerten<\/b> oder <b>den Hintergrund beschreiben<\/b>. Wann es anfing oder endete, spielt keine Rolle. Im Englischen entspricht es meist <b>used to / would<\/b> (Gewohnheiten) oder <b>was/were + -ing<\/b> (andauernde Handlungen), im Deutschen oft „früher immer …“ oder „war gerade dabei …“.", "Conjugation": "Konjugation", "Only 3 irregular verbs": "Nur 3 unregelmäßige Verben", "Past habits": "Gewohnheiten in der Vergangenheit", "As a kid, I used to play football every day.": "Als Kind habe ich jeden Tag Fußball gespielt.", "I used to live in Ankara.": "Früher habe ich in Ankara gewohnt.", "Descriptions": "Beschreibungen", "People, places, weather, feelings.": "Menschen, Orte, Wetter, Gefühle.", "The house was big and had a garden.": "Das Haus war groß und hatte einen Garten.", "It was cold and I was tired.": "Es war kalt und ich war müde.", "Time and age": "Uhrzeit und Alter", "In the past, time and age always take the imperfecto.": "In der Vergangenheit stehen Uhrzeit und Alter immer im imperfecto.", "It was eight o'clock.": "Es war acht Uhr.", "When I was ten…": "Als ich zehn war…", "Ongoing action (background)": "Andauernde Handlung (Hintergrund)", "An action in progress while something else happens.": "Eine Handlung, die gerade läuft, während etwas anderes passiert.", "While I was cooking, she was watching TV.": "Während ich kochte, sah sie fern.", "Polite requests": "Höfliche Bitten", "Softer than quiero.": "Höflicher als quiero.", "I'd like a coffee, please.": "Ich hätte gern einen Kaffee, bitte.", "If English says <b>used to / would / was -ing<\/b>, it's usually imperfecto. If it's a finished one-off event in the <b>simple past<\/b>, it's usually indefinido.": "Wenn man im Englischen <b>used to / would / was -ing<\/b> sagt, ist es meist imperfecto. Ist es ein abgeschlossenes, einmaliges Ereignis im <b>simple past<\/b>, ist es meist indefinido.", "yo and él share the same form (hablaba), so say the subject when needed.": "yo und él haben dieselbe Form (hablaba), deshalb nenne das Subjekt, wenn nötig.", "As a kid I used to eat a lot of chocolate.": "Als Kind habe ich viel Schokolade gegessen.", "A habit, so imperfecto: comía.": "Eine Gewohnheit, also imperfecto: comía.", "When I lived in Ankara, I worked a lot.": "Als ich in Ankara wohnte, habe ich viel gearbeitet.", "An ongoing situation in the past: vivía.": "Eine andauernde Situation in der Vergangenheit: vivía.", "It was ten at night.": "Es war zehn Uhr abends.", "Telling the time in the past uses the imperfecto: Eran.": "Für die Uhrzeit in der Vergangenheit nimmt man das imperfecto: Eran.", "We used to go to the beach every summer.": "Jeden Sommer sind wir an den Strand gefahren.", "ir is irregular: íbamos.": "ir ist unregelmäßig: íbamos.", "My grandmother was very nice.": "Meine Großmutter war sehr nett.", "Describing character, so imperfecto.": "Charakterbeschreibung, also imperfecto.", "I didn't use to watch TV.": "Früher habe ich nicht ferngesehen.", "ver is irregular: veía.": "ver ist unregelmäßig: veía.", "While you were sleeping, I was cleaning.": "Während du geschlafen hast, habe ich geputzt.", "“mientras” shows two actions going on at the same time, so both are imperfecto.": "„mientras“ zeigt zwei Handlungen, die gleichzeitig ablaufen, deshalb stehen beide im imperfecto.", "Indefinido or imperfecto?": "Indefinido oder imperfecto?", "Scene and event": "Szene und Ereignis", "was -ing ↔ simple past": "„war gerade …“ ↔ abgeschlossenes Ereignis", "Think of a scene: the <b>imperfecto<\/b> is the <b>set and background<\/b> (what was going on, what it was like). The <b>indefinido<\/b> is the <b>event<\/b> that happened (what happened, what finished). The two often appear together in the same sentence.": "Stell dir eine Szene vor: Das <b>imperfecto<\/b> ist die <b>Kulisse und der Hintergrund<\/b> (was gerade los war, wie es war). Das <b>indefinido<\/b> ist das <b>Ereignis<\/b>, das passiert ist (was geschah, was abgeschlossen wurde). Beide stehen oft zusammen im selben Satz.", "Comparison": "Vergleich", "Verbs that change meaning": "Verben, die ihre Bedeutung ändern", "conocía a Ana = I knew Ana<br>conocí a Ana = I met Ana": "conocía a Ana = ich kannte Ana<br>conocí a Ana = ich habe Ana kennengelernt", "sabía = I knew<br>supe = I found out": "sabía = ich wusste<br>supe = ich habe es erfahren", "no quería = I didn't want to<br>no quise = I refused · no pude = I couldn't (I tried)": "no quería = ich wollte nicht<br>no quise = ich habe mich geweigert · no pude = ich konnte nicht (ich habe es versucht)", "Background + interrupting event": "Hintergrund + unterbrechendes Ereignis", "The ongoing action is imperfecto, the interrupting one is indefinido.": "Die andauernde Handlung steht im imperfecto, die unterbrechende im indefinido.", "I was sleeping when the phone rang.": "Ich schlief gerade, als das Telefon klingelte.", "It was raining a lot, so we decided to stay home.": "Es regnete stark, also haben wir beschlossen, zu Hause zu bleiben.", "Habit vs. one time": "Gewohnheit vs. einmal", "Same verb, different meaning.": "Gleiches Verb, andere Bedeutung.", "I used to go to the gym.": "Früher bin ich ins Fitnessstudio gegangen.", "Yesterday I went to the gym.": "Gestern bin ich ins Fitnessstudio gegangen.", "English <b>“was”<\/b> on its own can match either tense (<i>the house was big<\/i> → era). Then ask: is it a description or an event?": "Das englische <b>„was“<\/b> allein kann beiden Zeiten entsprechen (<i>the house was big<\/i> → era). Frag dich dann: Ist es eine Beschreibung oder ein Ereignis?", "If <b>“would”<\/b> describes a habit (<i>we would go to the beach<\/i>) it's imperfecto. If it's conditional (<i>I would like<\/i>) it's the condicional.": "Wenn <b>„would“<\/b> eine Gewohnheit beschreibt (<i>we would go to the beach<\/i>), ist es imperfecto. Ist es eine Bedingung (<i>I would like<\/i>), ist es das condicional.", "As a kid, I used to go to the park every day.": "Als Kind bin ich jeden Tag in den Park gegangen.", "Habit → imperfecto.": "Gewohnheit → imperfecto.", "Yesterday I went to the gym at seven.": "Gestern bin ich um sieben ins Fitnessstudio gegangen.", "One-off, finished event → indefinido.": "Einmaliges, abgeschlossenes Ereignis → indefinido.", "Background → imperfecto. The phone ringing is the event → indefinido.": "Hintergrund → imperfecto. Das Klingeln des Telefons ist das Ereignis → indefinido.", "My grandparents' house was very big.": "Das Haus meiner Großeltern war sehr groß.", "Description → imperfecto.": "Beschreibung → imperfecto.", "When I was ten, I moved to Ankara.": "Als ich zehn war, bin ich nach Ankara gezogen.", "Age → imperfecto. Moving is a single event → indefinido.": "Alter → imperfecto. Der Umzug ist ein einzelnes Ereignis → indefinido.", "While I was cooking, my flatmate was watching TV.": "Während ich kochte, sah mein Mitbewohner fern.", "mientras → two ongoing actions.": "mientras → zwei andauernde Handlungen.", "Last night I watched a really good film.": "Gestern Abend habe ich einen richtig guten Film gesehen.", "A finished single event → indefinido.": "Ein abgeschlossenes, einzelnes Ereignis → indefinido.", "I met Laura at the party. She's really nice!": "Ich habe Laura auf der Party kennengelernt. Sie ist echt nett!", "In the indefinido, conocer means “met”.": "Im indefinido bedeutet conocer „kennenlernen“.", "It was sunny and people were strolling in the Retiro.": "Es war sonnig und die Leute spazierten durch den Retiro.", "Describing the weather → imperfecto.": "Wetterbeschreibung → imperfecto.", "Future and guesses": "Zukunft und Vermutungen", "will / going to": "Futur I / werden", "Used for things that will happen, predictions and promises. In everyday speech, near plans usually use <b>ir a + infinitive<\/b> (<i>voy a cenar<\/i>), like English “going to”. The futuro can also <b>guess about the present<\/b>: <i>Estará en casa<\/i> → “He's probably at home”.": "Wird für Dinge verwendet, die passieren werden, für Vorhersagen und Versprechen. In der Alltagssprache verwendet man für nahe Pläne meist <b>ir a + Infinitiv<\/b> (<i>voy a cenar<\/i>), ähnlich wie das englische „going to“. Das futuro kann auch <b>Vermutungen über die Gegenwart<\/b> ausdrücken: <i>Estará en casa<\/i> → „Er ist wahrscheinlich zu Hause“.", "Conjugation: infinitive + ending": "Konjugation: Infinitiv + Endung", "Irregular stems (same endings)": "Unregelmäßige Stämme (gleiche Endungen)", "The e drops": "Das e fällt weg", "A d is added": "Ein d kommt hinzu", "Completely different": "Ganz anders", "Future and predictions": "Zukunft und Vorhersagen", "It will rain in Madrid tomorrow.": "Morgen wird es in Madrid regnen.", "Next year I'll speak better Spanish.": "Nächstes Jahr werde ich besser Spanisch sprechen.", "Plans (spoken Spanish)": "Pläne (gesprochenes Spanisch)", "This weekend we're going to go to Toledo.": "Dieses Wochenende fahren wir nach Toledo.", "Guessing about the present": "Vermutungen über die Gegenwart", "Means “probably…”.": "Bedeutet „wahrscheinlich …“.", "Where's Ana? — She's probably at work.": "Wo ist Ana? — Sie ist wahrscheinlich bei der Arbeit.", "All futuro endings have an accent except nosotros (-emos).": "Alle Endungen des futuro haben einen Akzent außer nosotros (-emos).", "Futuro and condicional share the same irregular stems. Learn one and you know both.": "Futuro und condicional haben dieselben unregelmäßigen Stämme. Wer einen kennt, kennt beide.", "It will rain tomorrow.": "Morgen wird es regnen.", "Next year I'll live in Barcelona.": "Nächstes Jahr werde ich in Barcelona wohnen.", "Will you have time tomorrow?": "Wirst du morgen Zeit haben?", "We'll make dinner.": "Wir machen das Abendessen.", "Which structure is most common for near plans in spoken Spanish?": "Welche Struktur ist für nahe Pläne im gesprochenen Spanisch am häufigsten?", "I don't know where Luis is. He's probably at work.": "Ich weiß nicht, wo Luis ist. Er ist wahrscheinlich bei der Arbeit.", "The futuro can also guess about the present.": "Das futuro kann auch Vermutungen über die Gegenwart ausdrücken.", "They won't be able to come.": "Sie werden nicht kommen können.", "Politeness, wishes, advice": "Höflichkeit, Wünsche, Ratschläge", "would": "würde / Konjunktiv II", "The equivalent of English <b>would<\/b>. Used in polite requests, wishes, advice and hypotheses. Easy to form: the futuro stem + the -er/-ir endings of the imperfecto.": "Entspricht dem englischen <b>would<\/b> und dem deutschen <b>würde<\/b> bzw. Konjunktiv II. Wird für höfliche Bitten, Wünsche, Ratschläge und Hypothesen verwendet. Leicht zu bilden: Stamm des futuro + die -er/-ir-Endungen des imperfecto.", "Irregular stems = same as futuro": "Unregelmäßige Stämme = wie beim futuro", "Could you help me, please?": "Könnten Sie mir bitte helfen?", "Wishes": "Wünsche", "I'd like to live in the centre.": "Ich würde gern im Zentrum wohnen.", "Advice": "Ratschläge", "If I were you, I'd talk to the landlord.": "An deiner Stelle würde ich mit dem Vermieter sprechen.", "Hypotheses": "Hypothesen", "With more money, I'd buy a flat.": "Mit mehr Geld würde ich eine Wohnung kaufen.", "In “Si tuviera dinero, compraría…”, <b>tuviera<\/b> is the imperfect subjunctive (B1+). For now, learning the condicional part is enough.": "In „Si tuviera dinero, compraría…“ ist <b>tuviera<\/b> der Konjunktiv Imperfekt (B1+). Für den Moment reicht es, das condicional zu lernen.", "I'd like a coffee with milk, please.": "Ich hätte gern einen Milchkaffee, bitte.", "Could you open the window?": "Könnten Sie das Fenster öffnen?", "If I were you, I wouldn't do it.": "An deiner Stelle würde ich es nicht machen.", "We'd travel more, but we don't have time.": "Wir würden mehr reisen, aber wir haben keine Zeit.", "Hypothesis → condicional.": "Hypothese → condicional.", "He would have to come tomorrow.": "Er müsste morgen kommen.", "What would you say in my place?": "Was würdest du an meiner Stelle sagen?", "Commands and instructions": "Befehle und Anweisungen", "imperative (speak! / don't speak!)": "Imperativ (sprich! / sprechen Sie!)", "Used for commands, instructions, advice and invitations. The affirmative <b>tú<\/b> form is the easiest. The <b>usted<\/b> form and all <b>negative<\/b> commands come from the subjunctive.": "Wird für Befehle, Anweisungen, Ratschläge und Einladungen verwendet. Die bejahte <b>tú<\/b>-Form ist die einfachste. Die <b>usted<\/b>-Form und alle <b>verneinten<\/b> Befehle kommen aus dem Subjuntivo.", "Affirmative commands": "Bejahte Befehle", "Rules": "Regeln", "tú affirmative": "tú bejaht", "= the él form of the presente: habla, come, cierra, vuelve": "= die él-Form des presente: habla, come, cierra, vuelve", "tú irregular (8 verbs)": "tú unregelmäßig (8 Verben)", "Negative = no + subjunctive": "Verneint = no + Subjuntivo", "Pronouns": "Pronomen", "Attached to the end in the affirmative: <b>dímelo<\/b>, <b>siéntate<\/b>. In front in the negative: <b>no me lo digas<\/b>.": "Im bejahten Befehl werden sie angehängt: <b>dímelo<\/b>, <b>siéntate<\/b>. Im verneinten stehen sie davor: <b>no me lo digas<\/b>.", "Instructions": "Anweisungen", "Go straight on and turn right.": "Gehen Sie geradeaus und biegen Sie rechts ab.", "Fill in this form, please.": "Füllen Sie bitte dieses Formular aus.", "Requests and advice": "Bitten und Ratschläge", "Speak more slowly, please.": "Sprich bitte langsamer.", "Don't worry.": "Mach dir keine Sorgen.", "Spaniards use the imperative a lot and it isn't rude. <i>Ponme una caña<\/i> (Give me a small beer) is completely normal in a bar.": "Spanier verwenden den Imperativ sehr oft und er ist nicht unhöflich. <i>Ponme una caña<\/i> (Gib mir ein kleines Bier) ist in einer Bar völlig normal.", "Speak more slowly, please!": "Sprich bitte langsamer!", "tú affirmative = presente él: habla.": "tú bejaht = presente él: habla.", "Close the door!": "Mach die Tür zu!", "cerrar: e → ie, él cierra, so the command is cierra.": "cerrar: e → ie, él cierra, also lautet der Befehl cierra.", "Come here!": "Komm her!", "venir → ven (irregular).": "venir → ven (unregelmäßig).", "Don't do that!": "Mach das nicht!", "Negative command = no + subjunctive: no hagas.": "Verneinter Befehl = no + Subjuntivo: no hagas.", "Sign here, please.": "Unterschreiben Sie bitte hier.", "The usted command comes from the subjunctive: firme.": "Der usted-Befehl kommt aus dem Subjuntivo: firme.", "Tell the truth!": "Sag die Wahrheit!", "Wishes, wants, feelings, doubt": "Wünsche, Wollen, Gefühle, Zweifel", "(I want you) to…, may…": "dass … (Wunsch, Gefühl, Zweifel)", "It doesn't express facts but <b>wishes, wants, feelings, doubt and things that haven't happened yet<\/b>. It usually comes after <b>que<\/b> when the main clause has a different subject: <i>Quiero <b>que vengas<\/b><\/i> → “I want you to come”.": "Er drückt keine Tatsachen aus, sondern <b>Wünsche, Willen, Gefühle, Zweifel und Dinge, die noch nicht passiert sind<\/b>. Er steht meist nach <b>que<\/b>, wenn der Hauptsatz ein anderes Subjekt hat: <i>Quiero <b>que vengas<\/b><\/i> → „Ich will, dass du kommst“.", "Formula: yo presente → drop -o → switch the vowel": "Formel: yo im presente → -o weg → Vokal tauschen", "Irregulars": "Unregelmäßige Formen", "6 fully irregular": "6 völlig unregelmäßige", "From the yo stem": "Vom yo-Stamm", "Spelling": "Schreibweise", "Wants (different subject)": "Wollen (anderes Subjekt)", "I want you to come to the party.": "Ich möchte, dass du zur Party kommst.", "Wishes and feelings": "Wünsche und Gefühle", "I hope you're well.": "Ich hoffe, es geht dir gut.", "Hopefully it'll be sunny tomorrow.": "Hoffentlich scheint morgen die Sonne.", "Cuando + future": "Cuando + Zukunft", "“When…” about the future": "„Wenn …“ in der Zukunft", "When you arrive, call me.": "Wenn du ankommst, ruf mich an.", "Evaluations": "Bewertungen", "It's important that we talk.": "Es ist wichtig, dass wir reden.", "Short reminder <b>WEIRDO<\/b>: Wishes, Emotions, Impersonal expressions, Recommendations, Doubt, Ojalá.": "Kurze Eselsbrücke <b>WEIRDO<\/b>: Wishes, Emotions, Impersonal expressions, Recommendations, Doubt, Ojalá.", "<b>Creo que<\/b> and <b>pienso que<\/b> take the indicative (Creo que <i>tienes<\/i> razón). <b>No creo que<\/b> takes the subjunctive (No creo que <i>tengas<\/i> razón).": "<b>Creo que<\/b> und <b>pienso que<\/b> stehen mit dem Indikativ (Creo que <i>tienes<\/i> razón). <b>No creo que<\/b> steht mit dem Subjuntivo (No creo que <i>tengas<\/i> razón).", "I want you to come with me.": "Ich will, dass du mit mir kommst.", "querer que + different subject → subjunctive.": "querer que + anderes Subjekt → Subjuntivo.", "When I get home, I'll call you.": "Wenn ich nach Hause komme, rufe ich dich an.", "cuando + future → subjunctive: llegue.": "cuando + Zukunft → Subjuntivo: llegue.", "I think you're right.": "Ich glaube, du hast recht.", "Affirmative creo que → indicative.": "Bejahtes creo que → Indikativ.", "It's important that we talk to him.": "Es ist wichtig, dass wir mit ihm reden.", "Ser or estar?": "Ser oder estar?", "The two verbs “to be”": "Die zwei Verben für „sein“", "to be": "sein", "Both mean “to be”. <b>Ser<\/b> describes permanent, defining traits (what, who); <b>estar<\/b> describes states and location (how, where).": "Beide bedeuten „sein“. <b>Ser<\/b> beschreibt dauerhafte, bestimmende Eigenschaften (was, wer); <b>estar<\/b> beschreibt Zustände und den Ort (wie, wo).", "Conjugation (presente)": "Konjugation (presente)", "Which one when?": "Wann welches?", "Identity, job, origin, character, physical traits, time and date, material, where an event takes place<br><i>Soy ingeniero. Es de Kayseri. Son las tres. La fiesta es en mi casa.<\/i>": "Identität, Beruf, Herkunft, Charakter, Aussehen, Uhrzeit und Datum, Material, Ort einer Veranstaltung<br><i>Soy ingeniero. Es de Kayseri. Son las tres. La fiesta es en mi casa.<\/i>", "Location, temporary state, feelings, health, resulting state, estar + gerund<br><i>Estoy en Madrid. Estoy cansado. La tienda está cerrada.<\/i>": "Ort, vorübergehender Zustand, Gefühle, Gesundheit, Ergebniszustand, estar + Gerundium<br><i>Estoy en Madrid. Estoy cansado. La tienda está cerrada.<\/i>", "Adjectives that change meaning": "Adjektive, die ihre Bedeutung ändern", "ser listo = clever · estar listo = ready<br>ser aburrido = boring · estar aburrido = bored<br>ser malo = bad · estar malo = ill": "ser listo = klug · estar listo = fertig, bereit<br>ser aburrido = langweilig · estar aburrido = gelangweilt<br>ser malo = schlecht · estar malo = krank", "Examples": "Beispiele", "I'm from Turkey, but I'm in Madrid.": "Ich komme aus der Türkei, aber ich bin in Madrid.", "My boss is very nice, but today he's angry.": "Mein Chef ist sehr nett, aber heute ist er verärgert.", "Location uses <b>estar<\/b> (<i>El banco está en la calle Alcalá<\/i>). But where an <b>event<\/b> takes place uses <b>ser<\/b> (<i>La reunión es en la sala 3<\/i>).": "Für den Ort nimmt man <b>estar<\/b> (<i>El banco está en la calle Alcalá<\/i>). Für den Ort einer <b>Veranstaltung<\/b> aber <b>ser<\/b> (<i>La reunión es en la sala 3<\/i>).", "I'm an engineer.": "Ich bin Ingenieur.", "Job → ser.": "Beruf → ser.", "Madrid is in the centre of Spain.": "Madrid liegt in der Mitte Spaniens.", "Location → estar.": "Ort → estar.", "I'm very tired today.": "Ich bin heute sehr müde.", "Temporary state → estar.": "Vorübergehender Zustand → estar.", "The meeting is in room 3.": "Die Besprechung ist in Raum 3.", "Where an event takes place → ser.": "Ort einer Veranstaltung → ser.", "This film is boring.": "Dieser Film ist langweilig.", "“Boring” (a trait) → ser. “Estoy aburrido” = I'm bored.": "„Langweilig“ (Eigenschaft) → ser. „Estoy aburrido“ = Mir ist langweilig.", "It's half past three.": "Es ist halb vier.", "Time → ser.": "Uhrzeit → ser.", "Are you ready? We're leaving.": "Bist du fertig? Wir gehen.", "estar listo = to be ready.": "estar listo = fertig / bereit sein.", "Everyday": "Alltag", "How's it going?": "Wie geht's?", "Can you repeat that, please?": "Kannst du das bitte wiederholen?", "Slower, please.": "Langsamer, bitte.", "How do you say … in Spanish?": "Wie sagt man … auf Spanisch?", "OK.": "Okay.", "Really?": "Echt?", "I don't mind.": "Ist mir egal.", "How nice!": "Wie schön!", "Excuse me, do you have a moment?": "Entschuldigung, hast du kurz Zeit?", "Sorry, I don't know.": "Tut mir leid, ich weiß es nicht.", "See you later.": "Bis später.", "Bars & restaurants": "Bars & Restaurants", "A table for two, please.": "Einen Tisch für zwei, bitte.", "What do you recommend?": "Was empfehlen Sie mir?", "For me, the set menu.": "Für mich das Tagesmenü.", "Can I get a small beer?": "Kann ich ein kleines Bier bekommen?", "The bill, please.": "Die Rechnung, bitte.", "Can I pay by card?": "Kann man mit Karte zahlen?", "Does it contain pork?": "Ist da Schweinefleisch drin?", "It's delicious.": "Es ist köstlich.", "For here or to take away?": "Zum Hieressen oder zum Mitnehmen?", "A white coffee, please.": "Einen Milchkaffee, bitte.", "Do you have an outdoor terrace?": "Haben Sie eine Terrasse?", "It's on me.": "Ich lade dich ein.", "Bank & paperwork": "Bank & Behörden", "I'd like to open an account.": "Ich würde gern ein Konto eröffnen.", "I want to set up a direct debit for the bill.": "Ich möchte die Rechnung per Lastschrift bezahlen.", "What documents do I need?": "Welche Unterlagen brauche ich?", "I need to book an appointment.": "Ich muss einen Termin vereinbaren.", "Where do I have to sign?": "Wo muss ich unterschreiben?", "They've charged me a fee.": "Man hat mir eine Gebühr berechnet.", "I want to close the account.": "Ich möchte das Konto kündigen.", "How long does the transfer take?": "Wie lange dauert die Überweisung?", "I have to register at the town hall.": "Ich muss mich beim Einwohneramt anmelden.", "Can you give me a proof / receipt?": "Können Sie mir eine Bescheinigung / Quittung geben?", "Fill in this form.": "Füllen Sie dieses Formular aus.", "Home & rent": "Wohnung & Miete", "Does the rent include bills?": "Sind die Nebenkosten in der Miete enthalten?", "Are the building fees included?": "Sind die Hausgebühren inklusive?", "When do I get my deposit back?": "Wann bekomme ich meine Kaution zurück?", "The heating has broken down.": "Die Heizung ist kaputt.", "There's a water leak.": "Es gibt ein Wasserleck.", "Can a technician come?": "Kann ein Techniker kommen?", "The contract ends in March.": "Der Vertrag läuft im März aus.", "How much is the rent going up this year?": "Um wie viel steigt die Miete dieses Jahr?", "I have to talk to the landlord.": "Ich muss mit dem Vermieter sprechen.", "The neighbours are very noisy.": "Die Nachbarn sind sehr laut.", "Are pets allowed?": "Sind Haustiere erlaubt?", "Work & office": "Arbeit & Büro", "I have a meeting at ten.": "Ich habe um zehn eine Besprechung.", "Can we speak in English?": "Können wir Englisch sprechen?", "I'll send it to you by email.": "Ich schicke es dir per E-Mail.", "I'm swamped.": "Ich habe viel um die Ohren.", "When's the deadline?": "Wann ist die Frist?", "I'll get on it.": "Ich kümmere mich darum.", "Shall we meet for lunch?": "Gehen wir zusammen Mittag essen?", "I'm working from home today.": "Heute arbeite ich im Homeoffice.", "I didn't quite get it, can you explain again?": "Ich habe es nicht ganz verstanden, kannst du es noch einmal erklären?", "We'll talk about it later.": "Wir sprechen später darüber.", "I'm on holiday next week.": "Nächste Woche bin ich im Urlaub.", "Good job!": "Gute Arbeit!", "Health": "Gesundheit", "I feel unwell.": "Ich fühle mich nicht gut.", "I have a headache.": "Ich habe Kopfschmerzen.", "I need to make a doctor's appointment.": "Ich muss einen Arzttermin vereinbaren.", "I have a fever.": "Ich habe Fieber.", "Do I need a prescription?": "Brauche ich ein Rezept?", "I'm allergic to penicillin.": "Ich bin allergisch gegen Penicillin.", "How often do I have to take it?": "Wie oft muss ich es nehmen?", "I have my health card.": "Ich habe meine Krankenversicherungskarte.", "I've twisted my ankle.": "Ich habe mir den Knöchel verstaucht.", "Where's the on-duty pharmacy?": "Wo ist die Notdienstapotheke?", "Getting around": "Unterwegs in der Stadt", "Which line goes to Sol?": "Welche Linie fährt nach Sol?", "Where do you top up the travel pass?": "Wo lädt man die Monatskarte auf?", "Will you let me know when we get there?": "Sagen Sie mir Bescheid, wenn wir ankommen?", "Is it far from here?": "Ist es weit von hier?", "A return ticket to Toledo.": "Eine Hin- und Rückfahrkarte nach Toledo.", "What time does the next train leave?": "Wann fährt der nächste Zug?", "I've missed the bus.": "Ich habe den Bus verpasst.", "What's the next stop?": "Was ist die nächste Haltestelle?", "There's a metro strike.": "Es gibt einen U-Bahn-Streik.", "Social & feelings": "Freizeit & Gefühle", "What are your plans for the weekend?": "Was hast du am Wochenende vor?", "Fancy a drink?": "Hast du Lust, etwas trinken zu gehen?", "I love it.": "Ich liebe es.", "That's a shame / it makes me sad.": "Wie schade / das macht mich traurig.", "I'm exhausted.": "Ich bin fix und fertig.", "How cool!": "Wie cool!", "I'm looking forward to seeing you.": "Ich freue mich darauf, dich zu sehen.", "I like him/her (as a person).": "Ich mag ihn/sie (als Person).", "No problem / It's fine.": "Kein Problem / Schon gut.", "What a drag!": "Wie öde!", "Let's meet at eight.": "Treffen wir uns um acht.", "to speak": "sprechen", "to work": "arbeiten", "to eat": "essen", "to live": "wohnen, leben", "to write": "schreiben", "to study": "lernen, studieren", "to buy": "kaufen", "to drink": "trinken", "to learn": "lernen", "to open": "öffnen", "to arrive": "ankommen", "to look for": "suchen", "to pay": "bezahlen", "to take / have": "nehmen / trinken", "to call": "anrufen", "to need": "brauchen", "to travel": "reisen", "to cook": "kochen", "to sell": "verkaufen", "to receive": "bekommen, erhalten", "to decide": "entscheiden", "to be (permanent)": "sein (dauerhaft)", "to be (state, place)": "sein (Zustand, Ort)", "to go": "gehen, fahren", "to have": "haben", "to do / make": "machen, tun", "can / to be able to": "können", "to want": "wollen", "to say / tell": "sagen", "to come": "kommen", "to put": "stellen, legen", "to know (facts)": "wissen", "to go out / leave": "ausgehen, hinausgehen", "to see / watch": "sehen / anschauen", "to give": "geben", "to sleep": "schlafen", "to ask for / order": "bitten um / bestellen", "to think": "denken", "to begin": "anfangen", "to return": "zurückkehren", "to play": "spielen", "to know (people/places)": "kennen (Personen/Orte)", "to read": "lesen", "to bring": "bringen", "usually": "normalerweise", "every day": "jeden Tag", "on Mondays": "montags", "often": "oft", "today": "heute", "this morning": "heute Morgen", "this week": "diese Woche", "this month": "diesen Monat", "yesterday": "gestern", "last night": "gestern Abend", "last week": "letzte Woche", "last year": "letztes Jahr", "two days ago": "vor zwei Tagen", "before, always": "früher immer", "back then, often": "damals oft", "as kids, every summer": "als Kinder jeden Sommer", "at that time, every day": "zu der Zeit jeden Tag", "tomorrow": "morgen", "next week": "nächste Woche", "next year": "nächstes Jahr", "in a few days": "in ein paar Tagen", "with more time": "mit mehr Zeit", "with more money": "mit mehr Geld", "in another situation": "in einer anderen Situation", "I hope that": "ich hoffe, dass", "I want (someone) to": "ich will, dass (jemand)", "hopefully": "hoffentlich", "it's important that": "es ist wichtig, dass", "when the phone rang": "als das Telefon klingelte", "Routine, now or a general fact → presente.": "Routine, jetzt oder eine allgemeine Tatsache → presente.", "A period that isn't over yet → pretérito perfecto (haber + participle).": "Ein noch nicht abgeschlossener Zeitraum → pretérito perfecto (haber + Partizip).", "A finished, specific time → indefinido.": "Eine abgeschlossene, bestimmte Zeit → indefinido.", "A past habit → imperfecto.": "Eine Gewohnheit in der Vergangenheit → imperfecto.", "Future → futuro.": "Zukunft → futuro.", "Hypothesis / “would” → condicional.": "Hypothese / „würde“ → condicional.", "Wish, want, evaluation → subjuntivo.": "Wunsch, Wille, Bewertung → subjuntivo.", "points to a specific, finished time, so indefinido": "zeigt einen bestimmten, abgeschlossenen Zeitpunkt, also indefinido", "describes a past habit, so imperfecto": "beschreibt eine Gewohnheit in der Vergangenheit, also imperfecto", "is a period that isn't over yet, so in Spain it's perfecto": "ist ein noch nicht abgeschlossener Zeitraum, also in Spanien perfecto", "Mixed: all tenses": "Gemischt: alle Zeiten", "Gustar and similar verbs (encantar, doler…)": "Gustar und ähnliche Verben (encantar, doler…)", "Object pronouns (lo, la, le, se lo)": "Objektpronomen (lo, la, le, se lo)", "Reflexive verbs (levantarse, ducharse…)": "Reflexive Verben (levantarse, ducharse…)", "None, only the topic I type below": "Keins, nur das Thema, das ich unten eingebe", "A Sunday at the Rastro": "Ein Sonntag auf dem Rastro", "It's Sunday morning and Daniel isn't working. He gets up at nine, has coffee and toast for breakfast and leaves the house. It's sunny and there are lots of people in the street. Daniel takes the metro to La Latina, because he wants to visit the Rastro, the most famous market in Madrid.": "Es ist Sonntagmorgen und Daniel arbeitet nicht. Er steht um neun auf, frühstückt Kaffee und Toast und verlässt das Haus. Die Sonne scheint und auf der Straße sind viele Leute. Daniel nimmt die U-Bahn bis La Latina, denn er möchte den Rastro besuchen, den berühmtesten Markt Madrids.", "At the Rastro there's a bit of everything: clothes, old books, records and furniture. Daniel looks at a Spanish cookbook. “How much is it?” he asks. “Eight euros,” says the seller. Daniel smiles and pays with a ten-euro note. Then he sits on a terrace with a friend and they have a couple of small beers and some tapas. For Daniel, this is the perfect Sunday.": "Auf dem Rastro gibt es alles Mögliche: Kleidung, alte Bücher, Schallplatten und Möbel. Daniel schaut sich ein spanisches Kochbuch an. „Was kostet das?“, fragt er. „Acht Euro“, sagt der Verkäufer. Daniel lächelt und bezahlt mit einem Zehneuroschein. Danach setzt er sich mit einem Freund auf eine Terrasse und sie trinken ein paar kleine Bier und essen Tapas. Für Daniel ist das der perfekte Sonntag.", "to get up": "aufstehen", "to have breakfast": "frühstücken", "to take the metro": "die U-Bahn nehmen", "the seller": "der Verkäufer", "a banknote": "ein Geldschein", "a small draught beer": "ein kleines Bier vom Fass", "What day is it?": "Welcher Tag ist heute?", "“Es domingo por la mañana”. The Rastro is held on Sundays.": "„Es domingo por la mañana“. Der Rastro findet sonntags statt.", "How much is the book?": "Wie viel kostet das Buch?", "The seller says “Ocho euros”. Daniel pays with a ten-euro note.": "Der Verkäufer sagt „Ocho euros“. Daniel bezahlt mit einem Zehneuroschein.", "How does Daniel get to La Latina?": "Wie kommt Daniel nach La Latina?", "My first day at the office": "Mein erster Tag im Büro", "Today was my first day at the new office. I got up very early because I was nervous, and I arrived at half past eight, half an hour earlier than I needed to. The receptionist gave me a card and showed me my desk.": "Heute war mein erster Tag im neuen Büro. Ich bin sehr früh aufgestanden, weil ich nervös war, und um halb neun angekommen, eine halbe Stunde früher als nötig. Die Empfangsdame hat mir eine Karte gegeben und mir meinen Schreibtisch gezeigt.", "In the morning I had three meetings. My colleagues have been very kind to me, although they speak very fast and I haven't understood everything. At two we had lunch together at a restaurant near the office. I ordered the set menu: lentils, roast chicken and flan.": "Am Vormittag hatte ich drei Besprechungen. Meine Kollegen waren sehr freundlich zu mir, auch wenn sie sehr schnell sprechen und ich nicht alles verstanden habe. Um zwei haben wir zusammen in einem Restaurant in der Nähe des Büros gegessen. Ich habe das Tagesmenü bestellt: Linsen, Brathähnchen und Flan.", "This afternoon I came home tired but happy. I haven't learned everyone's names yet, but I've already made a friend: Javier, who's an engineer too. More tomorrow.": "Heute Nachmittag bin ich müde, aber zufrieden nach Hause gekommen. Ich habe mir noch nicht alle Namen gemerkt, aber ich habe schon einen Freund gefunden: Javier, der auch Ingenieur ist. Morgen mehr.", "early": "früh", "nervous": "nervös", "to show": "zeigen", "colleagues": "Kollegen", "although": "obwohl, auch wenn", "not yet": "noch nicht", "What time did he arrive at the office?": "Um wie viel Uhr ist er im Büro angekommen?", "Why hasn't he understood everything?": "Warum hat er nicht alles verstanden?", "Who is Javier?": "Wer ist Javier?", "Summers in the village": "Sommer im Dorf", "When I was little, I used to spend every summer in my grandparents' village. The village was very small: it had a square, a church, a bakery and not much else. There was no internet there, but I never got bored.": "Als ich klein war, verbrachte ich jeden Sommer im Dorf meiner Großeltern. Das Dorf war sehr klein: Es hatte einen Platz, eine Kirche, eine Bäckerei und nicht viel mehr. Dort gab es kein Internet, aber mir war nie langweilig.", "In the mornings, my grandfather and I would go to the vegetable garden to pick tomatoes. My grandmother cooked while she listened to the radio, and the house always smelled of freshly baked bread. In the afternoons it was very hot, so we all had a nap.": "Morgens gingen mein Großvater und ich in den Gemüsegarten, um Tomaten zu pflücken. Meine Großmutter kochte, während sie Radio hörte, und das Haus roch immer nach frisch gebackenem Brot. Nachmittags war es sehr heiß, also hielten wir alle Siesta.", "At night, the neighbours would bring their chairs out into the street and talk until very late. We children played in the square. Now I live in Madrid and have a lot of work, but sometimes I close my eyes and I can still smell my grandmother's bread.": "Abends stellten die Nachbarn ihre Stühle auf die Straße und unterhielten sich bis spät in die Nacht. Wir Kinder spielten auf dem Platz. Jetzt wohne ich in Madrid und habe viel Arbeit, aber manchmal schließe ich die Augen und kann das Brot meiner Großmutter immer noch riechen.", "village": "das Dorf", "to get bored": "sich langweilen", "vegetable garden": "der Gemüsegarten", "to pick": "pflücken, ernten", "to smell of": "riechen nach", "afternoon nap": "der Mittagsschlaf", "Where did she spend her summers?": "Wo verbrachte sie ihre Sommer?", "What did the grandmother do while she cooked?": "Was machte die Großmutter, während sie kochte?", "Why did they have a nap?": "Warum hielten sie Siesta?", "The lost key": "Der verlorene Schlüssel", "It was Friday night and it was raining hard. Lucía was coming home after having dinner with her friends. When she got to the door of her building, she looked for her keys in her bag, but they weren't there.": "Es war Freitagabend und es regnete stark. Lucía war auf dem Heimweg, nachdem sie mit ihren Freundinnen zu Abend gegessen hatte. Als sie an der Tür ihres Hauses ankam, suchte sie die Schlüssel in ihrer Handtasche, aber sie waren nicht da.", "First she called her flatmate, but she didn't answer: she was away on a trip in Valencia. Then she called the restaurant. A waiter looked under the table and found the keys. “What luck!” Lucía thought, and she went back to the restaurant by taxi.": "Zuerst rief sie ihre Mitbewohnerin an, aber die ging nicht ran: Sie war gerade in Valencia unterwegs. Dann rief sie im Restaurant an. Ein Kellner schaute unter den Tisch und fand die Schlüssel. „Was für ein Glück!“, dachte Lucía und fuhr mit dem Taxi zurück zum Restaurant.", "When she finally got home, it was one in the morning and she was soaked. She had a hot shower, put on her pyjamas and fell asleep straight away. Since that day, she always carries a copy of the key in her wallet.": "Als sie endlich zu Hause war, war es ein Uhr nachts und sie war klatschnass. Sie duschte heiß, zog ihren Schlafanzug an und schlief sofort ein. Seit diesem Tag trägt sie immer einen Ersatzschlüssel im Portemonnaie.", "handbag": "die Handtasche", "flatmate": "die Mitbewohnerin", "to answer": "antworten, rangehen", "to find": "finden", "soaked": "klatschnass", "the early hours": "die frühen Morgenstunden", "What was the weather like?": "Wie war das Wetter?", "“Era viernes por la noche y llovía mucho.” Describing the weather → imperfecto.": "„Era viernes por la noche y llovía mucho.“ Wetterbeschreibung → imperfecto.", "Where were the keys?": "Wo waren die Schlüssel?", "Why didn't the flatmate answer?": "Warum ging die Mitbewohnerin nicht ran?", "Flat hunting": "Wohnungssuche", "Marta and Tomás have been looking for a flat in Madrid for two months. They've seen more than fifteen flats, but they still haven't found the right one. Some are too expensive, others are very far from the centre, and one didn't even have a window in the bedroom.": "Marta und Tomás suchen seit zwei Monaten eine Wohnung in Madrid. Sie haben mehr als fünfzehn Wohnungen besichtigt, aber die richtige haben sie immer noch nicht gefunden. Manche sind zu teuer, andere liegen weit vom Zentrum entfernt, und eine hatte nicht einmal ein Fenster im Schlafzimmer.", "This morning they visited a flat in Chamberí. It has two bedrooms, lots of light and a new kitchen. The rent is a bit high, but the building fees are included. The landlady is very nice and has told them they can have a cat.": "Heute Morgen haben sie eine Wohnung in Chamberí besichtigt. Sie hat zwei Schlafzimmer, viel Licht und eine neue Küche. Die Miete ist etwas hoch, aber die Hausgebühren sind inklusive. Die Vermieterin ist sehr nett und hat ihnen gesagt, dass sie eine Katze haben dürfen.", "Now they're in a café doing the maths. “If we stop eating out at weekends, we can afford it,” says Tomás. Marta smiles and picks up her phone: “OK, I'll call her right now, before someone else rents it.”": "Jetzt sitzen sie in einem Café und rechnen. „Wenn wir am Wochenende nicht mehr auswärts essen, können wir es uns leisten“, sagt Tomás. Marta lächelt und nimmt ihr Handy: „Okay, ich rufe sie sofort an, bevor jemand anderes sie mietet.“", "to look for a flat": "eine Wohnung suchen", "for (a period of time)": "seit (Zeitraum)", "the rent": "die Miete", "building fees": "die Hausgebühren", "the landlady": "die Vermieterin", "to do the maths": "rechnen", "How many flats have they seen?": "Wie viele Wohnungen haben sie besichtigt?", "What is included in the rent of the Chamberí flat?": "Was ist in der Miete der Wohnung in Chamberí enthalten?", "What is Marta going to do at the end?": "Was wird Marta am Ende tun?", "Plans for the long weekend": "Pläne für das lange Wochenende", "Next Thursday is a public holiday, so Ana and her friends are going to have a four-day long weekend. This year they're not going to the beach: they're going to do a trip around Toledo and Segovia. They'll leave early on Thursday by car and come back on Sunday night.": "Nächsten Donnerstag ist Feiertag, also haben Ana und ihre Freunde ein langes Wochenende von vier Tagen. Dieses Jahr fahren sie nicht an den Strand: Sie machen eine Tour durch Toledo und Segovia. Sie fahren am Donnerstag früh mit dem Auto los und kommen am Sonntagabend zurück.", "In Toledo they'll stay in a small hotel in the old town. Ana wants to see the cathedral and buy marzipan for her mother. In Segovia they'll eat roast suckling pig, although Pablo, who's a vegetarian, will order something else. According to the forecast, it'll be cold but it won't rain.": "In Toledo übernachten sie in einem kleinen Hotel in der Altstadt. Ana möchte die Kathedrale sehen und Marzipan für ihre Mutter kaufen. In Segovia essen sie Spanferkel, obwohl Pablo, der Vegetarier ist, etwas anderes bestellen wird. Laut Wettervorhersage wird es kalt, aber es wird nicht regnen.", "And Monday? On Monday they'll all have to go back to work. “We'll be tired,” says Ana, “but it'll have been worth it.”": "Und am Montag? Am Montag müssen alle wieder zur Arbeit. „Wir werden müde sein“, sagt Ana, „aber es wird sich gelohnt haben.“", "public holiday": "der Feiertag", "long weekend": "das lange Wochenende", "the old town": "die Altstadt", "the forecast": "die Wettervorhersage", "to be worth it": "sich lohnen", "to have to": "müssen", "How many days does the long weekend last?": "Wie viele Tage dauert das lange Wochenende?", "What does Ana want to buy in Toledo?": "Was möchte Ana in Toledo kaufen?", "What will the weather be like?": "Wie wird das Wetter?", "My perfect day": "Mein perfekter Tag", "If I could choose my perfect day, it would start without an alarm clock. I'd get up late, around ten, and have churros with chocolate at San Ginés with my partner. Then we'd go for a long walk in the Retiro and rent a rowing boat on the lake.": "Wenn ich meinen perfekten Tag wählen könnte, würde er ohne Wecker beginnen. Ich würde spät aufstehen, gegen zehn, und mit meinem Partner in San Ginés Churros mit Schokolade frühstücken. Danach würden wir einen langen Spaziergang durch den Retiro machen und auf dem See ein Ruderboot mieten.", "At midday we'd have lunch on a terrace in La Latina, without rushing and without looking at our phones. In the afternoon I'd go to a bookshop and buy a novel in Spanish. At last I'd be able to read it without a dictionary! I'd also call my family to tell them how well I'm doing.": "Mittags würden wir auf einer Terrasse in La Latina essen, ohne Eile und ohne aufs Handy zu schauen. Am Nachmittag würde ich in eine Buchhandlung gehen und einen Roman auf Spanisch kaufen. Endlich könnte ich ihn ohne Wörterbuch lesen! Ich würde auch meine Familie anrufen, um ihr zu erzählen, wie gut es mir geht.", "In the evening we'd watch the sunset from the Temple of Debod and end the day with a simple dinner at home. I wouldn't need anything else. Maybe it isn't a very original plan, but for me it would be perfect.": "Am Abend würden wir den Sonnenuntergang vom Templo de Debod aus ansehen und den Tag mit einem einfachen Abendessen zu Hause beenden. Mehr bräuchte ich nicht. Vielleicht ist das kein sehr origineller Plan, aber für mich wäre er perfekt.", "alarm clock": "der Wecker", "to go for a walk": "spazieren gehen", "to rent": "mieten", "without rushing": "ohne Eile", "sunset": "der Sonnenuntergang", "simple": "einfach", "Where would they have breakfast?": "Wo würden sie frühstücken?", "What would they buy in the afternoon?": "Was würde die Person am Nachmittag kaufen?", "Where would they watch the sunset from?": "Von wo aus würden sie den Sonnenuntergang ansehen?", "Dinner with the neighbours": "Ein Abendessen mit den Nachbarn", "On Saturday, Elena and Kerem are inviting their new neighbours to dinner for the first time. Elena is a bit nervous: she wants everything to go well and hopes the neighbours will like Turkish food. Kerem tells her not to worry.": "Am Samstag laden Elena und Kerem ihre neuen Nachbarn zum ersten Mal zum Abendessen ein. Elena ist etwas nervös: Sie möchte, dass alles gut läuft, und hofft, dass den Nachbarn das türkische Essen schmeckt. Kerem sagt ihr, sie solle sich keine Sorgen machen.", "In the morning they go to the market together. Kerem wants them to buy aubergines to make karnıyarık, and Elena would rather they also make a simple salad, in case someone doesn't eat meat. “It's important that there are options for everyone,” she says.": "Am Morgen gehen sie zusammen auf den Markt. Kerem möchte, dass sie Auberginen kaufen, um Karnıyarık zu machen, und Elena möchte lieber, dass sie auch einen einfachen Salat zubereiten, falls jemand kein Fleisch isst. „Es ist wichtig, dass es für alle etwas gibt“, sagt sie.", "At nine the doorbell rings. The neighbours bring a bottle of wine and a homemade dessert. Over dinner they talk about their countries, about Madrid and about their jobs. At the end, the neighbour says: “I hope we do this again soon. Next time, when you come to our place, we'll make you a paella.”": "Um neun klingelt es an der Tür. Die Nachbarn bringen eine Flasche Wein und einen selbst gemachten Nachtisch mit. Beim Essen sprechen sie über ihre Länder, über Madrid und über ihre Arbeit. Am Ende sagt die Nachbarin: „Hoffentlich wiederholen wir das bald. Wenn ihr nächstes Mal zu uns kommt, machen wir euch eine Paella.“", "to go well": "gut laufen, gelingen", "to worry": "sich Sorgen machen", "aubergine": "die Aubergine", "in case": "falls, für den Fall, dass", "doorbell": "die Türklingel", "homemade": "selbst gemacht", "What does Elena want?": "Was möchte Elena?", "“Quiere que todo salga bien”: querer que + subjunctive.": "„Quiere que todo salga bien“: querer que + Subjuntivo.", "Why do they also make a salad?": "Warum machen sie auch einen Salat?", "What do the neighbours bring?": "Was bringen die Nachbarn mit?"};
 
+/* ================= My words: UI strings ================= */
+Object.assign(T.en,{
+tabWords:"Words",wordsTitle:"My words",
+wordsDesc:"Type a word you don't know. You'll get its meaning, how it's used and example sentences, and it's saved to your list. Now and then, test yourself on your own words.",
+wordPh:"Type a word… (e.g. aprovechar)",lookUp:"Look up",looking:"Looking it up…",
+srcNoteClaude:"✨ Claude explains each word: meaning, usage and examples.",
+srcNoteWeb:"Words are looked up on Wiktionary and translated with MyMemory. Only the word you type is sent.",
+srcClaude:"Explained by Claude",srcWeb:"Source: Wiktionary · translations: MyMemory",srcManual:"Added by you",
+notFound:"Couldn't find it automatically. Write the meaning yourself, or try again later.",
+offline:"You're offline. The word is saved; look it up again when you're online.",
+already:"Already in your list.",meaning:"Meaning",usage:"How it's used",examples:"Examples",forms:"Forms",
+myNote:"My note",notePh:"Where did you see it? A sentence to help you remember…",
+edit:"✏️ Edit",saveEdit:"Save",lookAgain:"🔄 Look up again",del:"🗑 Delete",sureDel:"Tap again to delete",
+backWords:"← My words",listTitle:"Your list ({0})",emptyList:"Your list is empty. Type your first word above.",
+sortNew:"Newest",sortAZ:"A–Z",sortWeak:"To review",testWords:"📝 Test ({0})",cardsWords:"🃏 Did I forget?",
+needMore:"Add a word with a meaning first.",remembered:"✓ I remembered",forgot:"✗ I forgot",tapShow:"Tap to show the meaning",
+cardsDone:"Done! You remembered {0} of {1}.",inSpanish:"in Spanish",youTyped:"you typed",addedOn:"Added {0}",
+editMeaning:"Meaning ({0})",addExample:"Add an example sentence (Spanish)",exTransPh:"Its translation (optional)",
+genderM:"masculine",genderF:"feminine",exportT:"Back up or move your list",
+exportD:"Copy your list and paste it into the app on another device, e.g. from claude.ai to your phone.",
+copyList:"Copy list",copied:"Copied ✓",importPh:"Paste a copied list here…",importBtn:"Import",imported:"{0} words added",
+importBad:"That doesn't look like a word list.",statsWords:"My words",statsKnown:"{0} well known",knowLevel:"How well you know it"
+});
+Object.assign(T.tr,{
+tabWords:"Kelimeler",wordsTitle:"Kelimelerim",
+wordsDesc:"Bilmediğin bir kelimeyi yaz. Anlamı, nasıl kullanıldığı ve örnek cümleler gelir, kelime listene kaydedilir. Ara ara sadece kendi kelimelerinle kendini test et.",
+wordPh:"Bir kelime yaz… (ör. aprovechar)",lookUp:"Ara",looking:"Aranıyor…",
+srcNoteClaude:"✨ Her kelimeyi Claude açıklıyor: anlam, kullanım ve örnekler.",
+srcNoteWeb:"Kelimeler Wiktionary'de aranır ve MyMemory ile çevrilir. Sadece yazdığın kelime gönderilir.",
+srcClaude:"Claude açıkladı",srcWeb:"Kaynak: Wiktionary · çeviri: MyMemory",srcManual:"Senin eklediğin",
+notFound:"Otomatik olarak bulunamadı. Anlamını kendin yaz ya da sonra tekrar dene.",
+offline:"İnternet yok. Kelime kaydedildi, internete bağlanınca tekrar ara.",
+already:"Bu kelime zaten listende.",meaning:"Anlamı",usage:"Nasıl kullanılır",examples:"Örnek cümleler",forms:"Çekim / biçimler",
+myNote:"Notum",notePh:"Nerede gördün? Hatırlamana yardım edecek bir cümle…",
+edit:"✏️ Düzenle",saveEdit:"Kaydet",lookAgain:"🔄 Tekrar ara",del:"🗑 Sil",sureDel:"Silmek için tekrar dokun",
+backWords:"← Kelimelerim",listTitle:"Listen ({0})",emptyList:"Listen boş. İlk kelimeni yukarıya yaz.",
+sortNew:"En yeni",sortAZ:"A–Z",sortWeak:"Tekrar edilecek",testWords:"📝 Test ({0})",cardsWords:"🃏 Unuttum mu?",
+needMore:"Önce anlamı olan bir kelime ekle.",remembered:"✓ Hatırladım",forgot:"✗ Unuttum",tapShow:"Anlamını görmek için dokun",
+cardsDone:"Bitti! {1} kelimeden {0} tanesini hatırladın.",inSpanish:"İspanyolcası",youTyped:"yazdığın",addedOn:"{0} eklendi",
+editMeaning:"Anlamı ({0})",addExample:"Örnek cümle ekle (İspanyolca)",exTransPh:"Çevirisi (isteğe bağlı)",
+genderM:"eril",genderF:"dişil",exportT:"Listeni yedekle ya da taşı",
+exportD:"Listeni kopyala ve başka bir cihazdaki uygulamaya yapıştır, örneğin claude.ai'den telefona.",
+copyList:"Listeyi kopyala",copied:"Kopyalandı ✓",importPh:"Kopyalanan listeyi buraya yapıştır…",importBtn:"İçe aktar",imported:"{0} kelime eklendi",
+importBad:"Bu bir kelime listesine benzemiyor.",statsWords:"Kelimelerim",statsKnown:"{0} tanesi iyi biliniyor",knowLevel:"Ne kadar iyi biliyorsun"
+});
+Object.assign(T.de,{
+tabWords:"Wörter",wordsTitle:"Meine Wörter",
+wordsDesc:"Gib ein Wort ein, das du nicht kennst. Du bekommst Bedeutung, Gebrauch und Beispielsätze, und das Wort wird in deiner Liste gespeichert. Teste dich ab und zu mit deinen eigenen Wörtern.",
+wordPh:"Wort eingeben… (z. B. aprovechar)",lookUp:"Nachschlagen",looking:"Wird nachgeschlagen…",
+srcNoteClaude:"✨ Claude erklärt jedes Wort: Bedeutung, Gebrauch und Beispiele.",
+srcNoteWeb:"Wörter werden bei Wiktionary nachgeschlagen und mit MyMemory übersetzt. Gesendet wird nur das eingegebene Wort.",
+srcClaude:"Erklärt von Claude",srcWeb:"Quelle: Wiktionary · Übersetzung: MyMemory",srcManual:"Von dir hinzugefügt",
+notFound:"Automatisch nichts gefunden. Schreib die Bedeutung selbst oder versuch es später noch einmal.",
+offline:"Du bist offline. Das Wort ist gespeichert; schlag es nach, sobald du online bist.",
+already:"Schon in deiner Liste.",meaning:"Bedeutung",usage:"Gebrauch",examples:"Beispiele",forms:"Formen",
+myNote:"Meine Notiz",notePh:"Wo hast du es gesehen? Ein Satz zum Merken…",
+edit:"✏️ Bearbeiten",saveEdit:"Speichern",lookAgain:"🔄 Erneut nachschlagen",del:"🗑 Löschen",sureDel:"Zum Löschen erneut tippen",
+backWords:"← Meine Wörter",listTitle:"Deine Liste ({0})",emptyList:"Deine Liste ist leer. Gib oben dein erstes Wort ein.",
+sortNew:"Neueste",sortAZ:"A–Z",sortWeak:"Zu wiederholen",testWords:"📝 Test ({0})",cardsWords:"🃏 Vergessen?",
+needMore:"Füge zuerst ein Wort mit Bedeutung hinzu.",remembered:"✓ Gewusst",forgot:"✗ Vergessen",tapShow:"Tippen, um die Bedeutung zu sehen",
+cardsDone:"Fertig! Du hast {0} von {1} gewusst.",inSpanish:"auf Spanisch",youTyped:"eingegeben",addedOn:"Hinzugefügt am {0}",
+editMeaning:"Bedeutung ({0})",addExample:"Beispielsatz hinzufügen (Spanisch)",exTransPh:"Übersetzung (optional)",
+genderM:"maskulin",genderF:"feminin",exportT:"Liste sichern oder übertragen",
+exportD:"Kopiere deine Liste und füge sie in der App auf einem anderen Gerät ein, z. B. von claude.ai aufs Handy.",
+copyList:"Liste kopieren",copied:"Kopiert ✓",importPh:"Kopierte Liste hier einfügen…",importBtn:"Importieren",imported:"{0} Wörter hinzugefügt",
+importBad:"Das sieht nicht wie eine Wortliste aus.",statsWords:"Meine Wörter",statsKnown:"{0} gut gelernt",knowLevel:"Wie gut du es kannst"
+});
+const POS={noun:{tr:"isim",de:"Substantiv"},verb:{tr:"fiil",de:"Verb"},adjective:{tr:"sıfat",de:"Adjektiv"},adverb:{tr:"zarf",de:"Adverb"},
+expression:{tr:"ifade",de:"Ausdruck"},phrase:{tr:"ifade",de:"Wendung"},preposition:{tr:"edat",de:"Präposition"},conjunction:{tr:"bağlaç",de:"Konjunktion"},
+pronoun:{tr:"zamir",de:"Pronomen"},interjection:{tr:"ünlem",de:"Interjektion"},"proper noun":{tr:"özel isim",de:"Eigenname"}};
+const posLabel=p=>{const k=(p||"").toLowerCase().trim();return (POS[k]&&POS[k][LANG])||k;};
+
+/* ================= My words: data ================= */
+const wordsList=()=>store.words||(store.words=[]);
+const bare=s=>String(s||"").replace(/^(el|la|los|las|un|una|lo)\s+/i,"").trim();
+const wkey=s=>deacc(bare(s).toLowerCase());
+const findWord=id=>wordsList().find(w=>w.id===id);
+const newStats=()=>({ok:0,bad:0,box:0,last:0});
+function wMeaning(w,k){const m=w.m&&w.m[k];return Array.isArray(m)?m.filter(Boolean).join("; "):(m||"");}
+function wPrim(w){return (SEC()&&wMeaning(w,LANG))||wMeaning(w,"en")||Object.keys(w.m||{}).map(k=>wMeaning(w,k)).find(Boolean)||"";}
+const dots=b=>"●".repeat(b)+"○".repeat(5-b);
+const escRe=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+let wordFlash="",wordEdit=false,wq="",wsort="new";
+function wordSrcNote(){return sampleFn?t("srcNoteClaude"):t("srcNoteWeb");}
+function renderWordSrc(){const e=document.getElementById("wSrc");if(e)e.textContent=wordSrcNote();}
+
+/* ================= My words: lookup ================= */
+async function fetchJSON(url,ms=9000){
+  const c=new AbortController();const tm=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal});if(!r.ok){const e=new Error("HTTP "+r.status);e.status=r.status;throw e;}return await r.json();}
+  finally{clearTimeout(tm);}
+}
+const htmlText=h=>{try{const d=new DOMParser().parseFromString(String(h),"text/html");return (d.body.textContent||"").replace(/\s+/g," ").trim();}catch(e){return String(h).replace(/<[^>]+>/g,"").trim();}};
+async function mm(text,from,to){
+  if(!text||from===to)return "";
+  try{
+    const r=await fetchJSON(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0,450))}&langpair=${from}|${to}`);
+    const s=r&&r.responseData&&r.responseData.translatedText;
+    if(r&&Number(r.responseStatus)===200&&s&&!/MYMEMORY WARNING|QUERY LENGTH|INVALID/i.test(s))return htmlText(s);
+  }catch(e){}
+  return "";
+}
+async function wikt(term){
+  try{return await fetchJSON(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(term)}`);}
+  catch(e){if(e.status===404)return null;throw e;}
+}
+function parseWikt(r){
+  const out={pos:"",defs:[],ex:[],formOf:null,formText:""};
+  const ents=r&&Array.isArray(r.es)?r.es:[];
+  for(const ent of ents){
+    for(const d of (ent.definitions||[])){
+      const raw=d.definition||"";const txt=htmlText(raw);if(!txt)continue;
+      if(!out.pos)out.pos=(ent.partOfSpeech||"").toLowerCase();
+      if(/\b(form|inflection|plural|participle|gerund|singular|person|conjugation|imperative|feminine|masculine|indicative|subjunctive|preterite|imperfect|infinitive|diminutive|superlative)\b[^.;]*\bof\b/i.test(txt)&&/<a[^>]*>/.test(raw)){
+        const links=[...String(raw).matchAll(/<a[^>]*>([^<]+)<\/a>/g)].map(m=>m[1]);
+        if(links.length&&!out.formOf){out.formOf=links[links.length-1];out.formText=txt;}
+        continue;
+      }
+      if(out.defs.length<3&&!out.defs.includes(txt))out.defs.push(txt);
+      const pes=d.parsedExamples||[];
+      pes.forEach(pe=>{const es=htmlText(pe.example||"");if(out.ex.length<3&&es&&es.length<220)out.ex.push({es,en:htmlText(pe.translation||"")});});
+      if(!pes.length)(d.examples||[]).forEach(x=>{const es=htmlText(x);if(out.ex.length<3&&es&&es.length<220)out.ex.push({es,en:""});});
+    }
+  }
+  return out;
+}
+async function lookupWeb(word){
+  const term=word.trim();
+  let r=await wikt(term.toLowerCase());
+  if(!r&&term!==term.toLowerCase())r=await wikt(term);
+  let p=r?parseWikt(r):null;let lemma=term.toLowerCase(),forms="";
+  if(p&&p.formOf){
+    forms=p.formText;
+    if(!p.defs.length){
+      lemma=p.formOf;const r2=await wikt(lemma);const p2=r2?parseWikt(r2):null;
+      if(p2&&p2.defs.length){if(!p2.ex.length)p2.ex=p.ex;p=p2;}
+    }
+  }
+  const w={es:lemma,typed:term,pos:p?p.pos:"",gender:"",m:{},usage:{},forms,ex:[],src:"web"};
+  if(p&&p.defs.length)w.m.en=p.defs;
+  for(const k of Object.keys(LANGS)){
+    if(k==="en"&&w.m.en)continue;
+    const s=await mm(lemma,"es",k);
+    if(s&&wkey(s)!==wkey(lemma))w.m[k]=[s];
+  }
+  if(!Object.keys(w.m).length)return null;
+  w.ex=(p?p.ex:[]).slice(0,3);
+  for(const x of w.ex){
+    if(!x.en)x.en=await mm(x.es,"es","en");
+    if(SEC())x[LANG]=await mm(x.es,"es",LANG);
+  }
+  return w;
+}
+async function lookupClaude(word){
+  const ks=Object.keys(LANGS);
+  const prompt=`You are a precise Spanish dictionary for a learner (around CEFR A2–B1) who lives in Madrid.
+The learner typed: "${word.replace(/"/g,"'")}"
+- If it is Spanish (any form), explain the dictionary headword: infinitive for verbs, masculine singular for adjectives, nouns with their article (e.g. "la casa"). If the learner typed an inflected form, say which form it is in "forms".
+- If it is English, Turkish or German, give the most common Spanish equivalent and explain that.
+- Peninsular Spanish. Short and practical.
+Languages: ${ks.map(k=>k+" = "+LANGS[k].ename).join(", ")}.
+Return ONLY JSON:
+{"es":"headword","typed":"what the learner typed","pos":"noun | verb | adjective | adverb | expression | preposition | …","gender":"m, f or empty",
+"meanings":{${ks.map(k=>`"${k}":["1–3 short meanings in ${LANGS[k].ename}"]`).join(",")}},
+"usage":{${ks.map(k=>`"${k}":"1–2 sentences in ${LANGS[k].ename}: when and how it is used (register, typical prepositions or collocations, false friends)"`).join(",")}},
+"forms":"irregular forms or a short conjugation/inflection note (in English), or empty",
+"examples":[{"es":"natural everyday example sentence using the word",${ks.map(k=>`"${k}":"${LANGS[k].ename} translation"`).join(",")}}]}
+Give exactly 3 examples.`;
+  const r=await askClaude(prompt);
+  const S=x=>typeof x==="string"?x.trim():"";
+  if(!r||!S(r.es))return null;
+  const w={es:S(r.es),typed:S(r.typed)||word,pos:S(r.pos),gender:S(r.gender).toLowerCase().slice(0,1),m:{},usage:{},forms:S(r.forms),ex:[],src:"claude"};
+  for(const k of ks){
+    const m=r.meanings&&r.meanings[k];
+    if(Array.isArray(m))w.m[k]=m.map(S).filter(Boolean).slice(0,3);else if(S(m))w.m[k]=[S(m)];
+    if(r.usage&&S(r.usage[k]))w.usage[k]=S(r.usage[k]);
+  }
+  w.ex=(Array.isArray(r.examples)?r.examples:[]).map(x=>{const o={es:S(x&&x.es)};ks.forEach(k=>{if(x&&S(x[k]))o[k]=S(x[k]);});return o;}).filter(x=>x.es).slice(0,4);
+  return w;
+}
+async function lookupWord(word){
+  if(sampleFn){
+    try{const w=await lookupClaude(word);if(w)return {w,status:"ok"};}
+    catch(e){if(e&&e.code==="not_granted"){sampleFn=null;}}
+  }
+  if(navigator.onLine===false)return {w:null,status:"offline"};
+  try{const w=await lookupWeb(word);return w?{w,status:"ok"}:{w:null,status:"notfound"};}
+  catch(e){return {w:null,status:navigator.onLine===false?"offline":"notfound"};}
+}
+async function addWord(raw){
+  const word=raw.trim().replace(/\s+/g," ");if(!word)return;
+  const dup=wordsList().find(w=>wkey(w.es)===wkey(word)||wkey(w.typed||"")===wkey(word));
+  if(dup){wordFlash=t("already");goWord(dup.id);return;}
+  const inp=$("#wIn"),btn=$("#wGo"),st=$("#wS");
+  if(inp)inp.disabled=true;if(btn)btn.disabled=true;if(st){st.className="status";st.innerHTML=`<span class="spin"></span>${t("looking")}`;}
+  const {w,status}=await lookupWord(word);
+  let nw;
+  if(w){
+    const d2=wordsList().find(x=>wkey(x.es)===wkey(w.es));
+    if(d2){wordFlash=t("already");goWord(d2.id);return;}
+    nw=Object.assign({id:"w"+Date.now().toString(36),added:Date.now(),note:"",st:newStats()},w);
+  }else{
+    nw={id:"w"+Date.now().toString(36),es:word,typed:word,pos:"",gender:"",m:{},usage:{},forms:"",ex:[],src:"manual",pending:true,added:Date.now(),note:"",st:newStats()};
+    wordFlash=status==="offline"?t("offline"):t("notFound");wordEdit=true;
+  }
+  store.words=[nw,...wordsList()];save();
+  goWord(nw.id);
+}
+function goWord(id){const h="#w-"+id;if(location.hash===h)route();else location.hash=h;}
+
+/* ================= My words: list page ================= */
+function renderWords(){
+  const ws=wordsList();const withM=ws.filter(w=>wPrim(w)).length;
+  $("#app").innerHTML=`<section class="hero"><h1>${t("wordsTitle")}</h1><p>${t("wordsDesc")}</p></section>
+  <div class="card pcard addbox">
+    <div class="inrow"><input class="tin" id="wIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${t("wordPh")}"><button class="btn" id="wGo">${t("lookUp")}</button></div>
+    <div class="keys">${["á","é","í","ó","ú","ñ","ü"].map(c=>`<button data-ch="${c}">${c}</button>`).join("")}</div>
+    <div class="status" id="wS"></div><div class="status" id="wSrc" style="font-size:12.5px">${esc(wordSrcNote())}</div>
+  </div>
+  ${ws.length?`<div class="toolbar mt"><h2 style="font-size:22px">${t("listTitle",ws.length)}</h2>
+    <div class="btns"><button class="btn" id="wTest" ${withM?"":"disabled"}>${t("testWords",Math.min(10,withM))}</button><button class="btn dark" id="wCards" ${withM?"":"disabled"}>${t("cardsWords")}</button></div></div>
+    ${withM?"":`<p class="muted">${t("needMore")}</p>`}
+    <div id="wzone" style="scroll-margin-top:90px"></div>
+    <div class="toolbar"><input class="search" id="wQ" placeholder="${t("search")}" value="${esc(wq)}">
+      <div class="seg">${[["new","sortNew"],["az","sortAZ"],["weak","sortWeak"]].map(([k,l])=>`<button class="${wsort===k?"on":""}" data-ws="${k}">${t(l)}</button>`).join("")}</div></div>
+    <div class="card plist" id="wList"></div>
+    <details class="card exportbox mt"><summary>${t("exportT")}</summary><p class="muted">${t("exportD")}</p>
+      <div class="btns"><button class="btn ghost" id="wCopy">${t("copyList")}</button></div>
+      <textarea id="wImp" class="note" placeholder="${t("importPh")}"></textarea>
+      <div class="btns"><button class="btn ghost" id="wImpGo">${t("importBtn")}</button><span class="status" id="wImpS"></span></div></details>`
+  :`<p class="muted mt">${t("emptyList")}</p>
+    <details class="card exportbox mt"><summary>${t("exportT")}</summary><p class="muted">${t("exportD")}</p>
+      <textarea id="wImp" class="note" placeholder="${t("importPh")}"></textarea>
+      <div class="btns"><button class="btn ghost" id="wImpGo">${t("importBtn")}</button><span class="status" id="wImpS"></span></div></details>`}`;
+  const inp=$("#wIn");bindKeys($(".addbox"),inp);
+  inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();addWord(inp.value);}};
+  $("#wGo").onclick=()=>addWord(inp.value);
+  if($("#wList")){
+    drawWordList();
+    $("#wQ").oninput=e=>{wq=e.target.value;drawWordList();};
+    document.querySelectorAll("[data-ws]").forEach(b=>b.onclick=()=>{wsort=b.dataset.ws;document.querySelectorAll("[data-ws]").forEach(x=>x.classList.toggle("on",x===b));drawWordList();});
+    $("#wTest").onclick=startWordTest;$("#wCards").onclick=startWordCards;
+  }
+  const cp=$("#wCopy");
+  if(cp)cp.onclick=async()=>{
+    const txt=JSON.stringify({app:"espanol-lab",v:1,words:wordsList()});
+    try{await navigator.clipboard.writeText(txt);cp.textContent=t("copied");}
+    catch(e){const ta=$("#wImp");ta.value=txt;ta.select();}
+  };
+  $("#wImpGo").onclick=()=>{
+    const s=$("#wImpS");let data;
+    try{data=JSON.parse($("#wImp").value);}catch(e){data=null;}
+    const arr=Array.isArray(data)?data:data&&Array.isArray(data.words)?data.words:null;
+    if(!arr){s.className="status err";s.textContent=t("importBad");return;}
+    let k=0;const have=new Set(wordsList().map(w=>wkey(w.es)));
+    arr.forEach(w=>{if(!w||typeof w.es!=="string"||have.has(wkey(w.es)))return;
+      const nw=Object.assign({m:{},usage:{},ex:[],note:"",src:"manual"},w,{id:"w"+Date.now().toString(36)+k,st:Object.assign(newStats(),w.st||{})});
+      store.words=[...wordsList(),nw];have.add(wkey(w.es));k++;});
+    save();renderWords();const s2=$("#wImpS");if(s2){s2.className="status";s2.textContent=t("imported",k);}
+  };
+}
+function drawWordList(){
+  let ws=wordsList().slice();const q=deacc((wq||"").toLowerCase());
+  if(q)ws=ws.filter(w=>deacc((w.es+" "+(w.typed||"")+" "+Object.keys(w.m||{}).map(k=>wMeaning(w,k)).join(" ")).toLowerCase()).includes(q));
+  if(wsort==="az")ws.sort((a,b)=>bare(a.es).localeCompare(bare(b.es),"es"));
+  else if(wsort==="weak")ws.sort((a,b)=>(a.st.box-b.st.box)||(a.st.last-b.st.last));
+  $("#wList").innerHTML=ws.length?ws.map(w=>`<a class="prow wrow" href="#w-${w.id}">${spk(bare(w.es))}<div style="min-width:0;flex:1"><div class="es">${esc(w.es)}${w.pending?" ⏳":""}</div><div class="m">${esc(wPrim(w)||"—")}</div></div><span class="wdots" title="${t("knowLevel")}">${dots(w.st.box)}</span></a>`).join("")
+    :`<p class="muted" style="padding:12px 16px;margin:0">${t("noResults")}</p>`;
+}
+
+/* ================= My words: detail page ================= */
+function renderWord(w){
+  const fl=LANGS[LANG].flag;
+  const gender=w.gender==="m"?t("genderM"):w.gender==="f"?t("genderF"):"";
+  const meta=[posLabel(w.pos),gender].filter(Boolean).join(" · ");
+  const typed=w.typed&&wkey(w.typed)!==wkey(w.es)?`${t("youTyped")}: <i>${esc(w.typed)}</i>`:"";
+  const usage=(SEC()&&w.usage&&w.usage[LANG])||(w.usage&&w.usage.en)||"";
+  const srcL=w.src==="claude"?t("srcClaude"):w.src==="web"?t("srcWeb"):t("srcManual");
+  const added=new Date(w.added||Date.now()).toLocaleDateString(LANG,{day:"numeric",month:"short",year:"numeric"});
+  const meanLines=`${wMeaning(w,"en")?`<div class="wmean">🇬🇧 ${esc(wMeaning(w,"en"))}</div>`:""}${SEC()&&wMeaning(w,LANG)?`<div class="wmean">${fl} ${esc(wMeaning(w,LANG))}</div>`:""}`;
+  const flash=wordFlash;wordFlash="";
+  $("#app").innerHTML=`<button class="back" onclick="location.hash='#words'">${t("backWords")}</button>
+  ${flash?`<div class="tip">${esc(flash)}</div>`:""}
+  <div class="card wcard">
+    <div class="whead"><div style="min-width:0"><h1 class="wword">${esc(w.es)} ${spk(bare(w.es))}</h1>
+      <div class="muted" style="font-size:14px">${[esc(meta),typed].filter(Boolean).join(" · ")}</div></div>
+      <span class="wdots big" title="${t("knowLevel")}">${dots(w.st.box)}</span></div>
+    ${wordEdit?`<div class="wsec"><label class="field">${t("editMeaning","🇬🇧 English")}<input id="eEn" value="${esc(wMeaning(w,"en"))}"></label>
+        ${SEC()?`<label class="field">${t("editMeaning",fl+" "+LANGS[LANG].name)}<input id="eL" value="${esc(wMeaning(w,LANG))}"></label>`:""}
+        <label class="field">${t("usage")}<textarea id="eU" class="note">${esc(usage)}</textarea></label>
+        <label class="field">${t("addExample")}<input id="eX" placeholder="Ej.: …"></label>
+        <label class="field">${t("exTransPh")}<input id="eXt"></label>
+        <div class="btns"><button class="btn" id="eSave">${t("saveEdit")}</button><button class="btn ghost" id="eCancel">${t("cancel")}</button></div></div>`
+    :`<div class="wsec"><h3>${t("meaning")}</h3>${meanLines||`<p class="muted">—</p>`}</div>
+      ${usage?`<div class="wsec"><h3>${t("usage")}</h3><p>${esc(usage)}</p></div>`:""}
+      ${w.forms?`<div class="wsec"><h3>${t("forms")}</h3><p>${esc(w.forms)}</p></div>`:""}`}
+    ${(w.ex||[]).length?`<div class="wsec"><h3>${t("examples")}</h3>${w.ex.map(x=>`<div class="exrow">${spk(x.es)}<div><div class="es">${esc(x.es)}</div>${transLines(x)}</div></div>`).join("")}</div>`:""}
+    <div class="wsec"><h3>${t("myNote")}</h3><textarea id="wNote" class="note" placeholder="${t("notePh")}">${esc(w.note||"")}</textarea></div>
+    <div class="status" style="font-size:12.5px">${esc(srcL)} · ${esc(t("addedOn",added))}</div>
+    <div class="btns mt">${wordEdit?"":`<button class="btn ghost" id="wEdit">${t("edit")}</button>`}<button class="btn ghost" id="wAgain">${t("lookAgain")}</button><button class="btn ghost" id="wDel">${t("del")}</button></div>
+    <div class="status" id="wDS"></div>
+  </div>`;
+  let tmr;$("#wNote").oninput=e=>{clearTimeout(tmr);tmr=setTimeout(()=>{w.note=e.target.value;save();},300);};
+  if($("#wEdit"))$("#wEdit").onclick=()=>{wordEdit=true;renderWord(w);};
+  if($("#eSave"))$("#eSave").onclick=()=>{
+    const en=$("#eEn").value.trim(),l=$("#eL")?$("#eL").value.trim():"",u=$("#eU").value.trim(),x=$("#eX").value.trim(),xt=$("#eXt").value.trim();
+    w.m=w.m||{};w.usage=w.usage||{};
+    if(en)w.m.en=en.split(/\s*;\s*/);else delete w.m.en;
+    if(SEC()){if(l)w.m[LANG]=l.split(/\s*;\s*/);else delete w.m[LANG];}
+    const uk=SEC()?LANG:"en";if(u)w.usage[uk]=u;else delete w.usage[uk];
+    if(x){const o={es:x};if(xt)o[SEC()?LANG:"en"]=xt;w.ex=[...(w.ex||[]),o];}
+    if(wPrim(w))w.pending=false;
+    save();wordEdit=false;renderWord(w);
+  };
+  if($("#eCancel"))$("#eCancel").onclick=()=>{wordEdit=false;renderWord(w);};
+  $("#wAgain").onclick=async()=>{
+    const b=$("#wAgain"),s=$("#wDS");b.disabled=true;s.className="status";s.innerHTML=`<span class="spin"></span>${t("looking")}`;
+    const {w:nw,status}=await lookupWord(w.typed||w.es);
+    if(nw){["es","pos","gender","m","usage","forms","ex","src"].forEach(k=>{w[k]=nw[k];});w.pending=false;save();wordEdit=false;renderWord(w);}
+    else{b.disabled=false;s.className="status err";s.textContent=status==="offline"?t("offline"):t("notFound");}
+  };
+  const del=$("#wDel");
+  del.onclick=()=>{if(!del.dataset.sure){del.dataset.sure="1";del.textContent=t("sureDel");return;}
+    store.words=wordsList().filter(x=>x.id!==w.id);save();wordEdit=false;location.hash="#words";};
+}
+
+/* ================= My words: test & cards ================= */
+function pickWords(n){
+  return wordsList().filter(w=>wPrim(w)).slice().sort((a,b)=>(a.st.box-b.st.box)||(a.st.last-b.st.last)||(Math.random()-.5)).slice(0,n);
+}
+function markWord(id,ok){
+  const w=findWord(id);if(!w)return;
+  w.st.last=Date.now();
+  if(ok){w.st.ok++;w.st.box=Math.min(5,w.st.box+1);}else{w.st.bad++;w.st.box=0;}
+  save();
+}
+function wordStem(w){
+  let s=bare(w.es).toLowerCase().split(/\s+/)[0];
+  if(/verb/i.test(w.pos||"")||/(ar|er|ir)(se)?$/.test(s)){s=s.replace(/se$/,"");if(/(ar|er|ir)$/.test(s)&&s.length>4)s=s.slice(0,-2);}
+  else if(s.length>4)s=s.slice(0,-1);
+  return s;
+}
+function wordQuestions(){
+  const all=wordsList().filter(w=>wPrim(w));
+  return shuffle(pickWords(10)).map(w=>{
+    const types=["type"];if(all.length>=4)types.push("mc","mc");
+    const stem=wordStem(w);
+    const re=new RegExp("(^|[^\\p{L}])("+escRe(stem)+"\\p{L}*)","iu");
+    const cl=(w.ex||[]).map(x=>{const m=x.es.match(re);return m?{x,form:m[2]}:null;}).filter(Boolean);
+    if(cl.length)types.push("cloze","cloze");
+    const tp=rnd(types);
+    const exHtml=`<b>${esc(w.es)}</b> = ${esc(wPrim(w))}${w.ex&&w.ex[0]?`<br><i>${esc(w.ex[0].es)}</i>`:""}`;
+    if(tp==="mc"){
+      const others=[...new Set(shuffle(all.filter(o=>o!==w).map(wPrim)).filter(m=>m!==wPrim(w)))].slice(0,3);
+      if(others.length>=2)return {wid:w.id,q:`${w.es} = ___`,h:posLabel(w.pos),opts:[wPrim(w),...others],ex:exHtml};
+    }
+    if(tp==="cloze"){
+      const c=rnd(cl);const o={wid:w.id,q:c.x.es.replace(c.form,"___"),h:bare(w.es),a:[c.form],ex:exHtml};
+      Object.keys(LANGS).forEach(k=>{if(c.x[k])o[k]=c.x[k];});return o;
+    }
+    return {wid:w.id,q:`${wPrim(w)} → ___`,h:t("inSpanish"),a:[w.es,bare(w.es)],ex:exHtml};
+  });
+}
+function startWordTest(){
+  const z=$("#wzone");if(!z)return;
+  const L={id:"words",noSave:true,back:"#words",backLabel:"backWords",quiz:wordQuestions(),onAnswer:(q,ok)=>markWord(q.wid,ok)};
+  if(!L.quiz.length)return;
+  L.regen=()=>{L.quiz=wordQuestions();z.innerHTML=`<div class="card quiz" id="quiz"></div>`;startQuiz(L,L.quiz);};
+  z.innerHTML=`<div class="card quiz" id="quiz"></div>`;startQuiz(L,L.quiz);
+  z.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function startWordCards(){
+  const z=$("#wzone");if(!z)return;
+  const deck=shuffle(pickWords(15));if(!deck.length)return;
+  let i=0,ok=0,flip=false;
+  const draw=()=>{
+    if(i>=deck.length){
+      z.innerHTML=`<div class="card result"><div class="big">${ok}/${deck.length}</div><p style="font-size:18px">${t("cardsDone",ok,deck.length)}</p>
+        <div class="btns" style="justify-content:center"><button class="btn" id="cAgain">${t("reshuffle")}</button><button class="btn ghost" id="cBack">${t("backWords")}</button></div></div>`;
+      $("#cAgain").onclick=startWordCards;$("#cBack").onclick=()=>route();return;
+    }
+    const w=deck[i];
+    z.innerHTML=`<div class="flash"><div class="fmeta"><span>${i+1} / ${deck.length}</span><span>${t("tapShow")}</span></div>
+      <div class="fcard ${flip?"flip":""}" id="wfc">
+        <div class="face"><div class="big">${esc(w.es)}</div>${spk(bare(w.es))}</div>
+        <div class="face b"><div class="big" style="font-size:22px">${esc(wPrim(w))}</div>${SEC()&&wMeaning(w,LANG)&&wMeaning(w,"en")?`<div class="small">🇬🇧 ${esc(wMeaning(w,"en"))}</div>`:""}${w.ex&&w.ex[0]?`<div class="small"><i>${esc(w.ex[0].es)}</i></div>`:""}</div>
+      </div>
+      <div class="btns mt" style="justify-content:center"><button class="btn ghost" id="cNo">${t("forgot")}</button><button class="btn" id="cYes">${t("remembered")}</button></div></div>`;
+    $("#wfc").onclick=e=>{if(e.target.closest("[data-say]"))return;flip=!flip;$("#wfc").classList.toggle("flip");};
+    $("#cYes").onclick=()=>{markWord(w.id,true);ok++;i++;flip=false;draw();};
+    $("#cNo").onclick=()=>{markWord(w.id,false);i++;flip=false;draw();};
+  };
+  draw();z.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
 /* ================= Progress ================= */
 function renderProgress(){
   const d=store.drill;const done=LESSONS.filter(L=>store.lessons[L.id]).length;
@@ -1714,7 +2127,7 @@ function renderProgress(){
   const weak=Object.entries(d.verbErr||{}).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const row=(n,pc,href)=>`<div class="row"><a class="nm" href="${href}">${n}</a><div class="bar"><i style="width:${pc||0}%"></i></div><span class="pc">${pct(pc)}</span></div>`;
   $("#app").innerHTML=`<section class="hero"><h1>${t("progTitle")}</h1><p>${t("progDesc")}</p></section>
-  <div class="stats"><div class="card stat"><div class="n">${done}/${LESSONS.length}</div><div class="l">${t("topicsDone")}</div></div><div class="card stat"><div class="n">${pct(avg)}</div><div class="l">${t("avgTenses")}</div></div><div class="card stat"><div class="n">${d.total}</div><div class="l">${t("drillQs")}</div></div><div class="card stat"><div class="n">${d.best}</div><div class="l">${t("bestStreak")}</div></div></div>
+  <div class="stats"><div class="card stat"><div class="n">${done}/${LESSONS.length}</div><div class="l">${t("topicsDone")}</div></div><div class="card stat"><div class="n">${pct(avg)}</div><div class="l">${t("avgTenses")}</div></div><div class="card stat"><div class="n">${d.total}</div><div class="l">${t("drillQs")}</div></div><div class="card stat"><div class="n">${d.best}</div><div class="l">${t("bestStreak")}</div></div><a class="card stat" href="#words" style="text-decoration:none;color:inherit"><div class="n">${wordsList().length}</div><div class="l">${t("statsWords")} · ${t("statsKnown",wordsList().filter(w=>w.st&&w.st.box>=3).length)}</div></a></div>
   <div class="sec"><h2>${t("tensesTitle")}</h2><div class="card prog">${LESSONS.map(L=>{const b=store.lessons[L.id];return row(tx(L.title),b?Math.round(b.best*100):null,"#l-"+L.id);}).join("")}</div></div>
   <div class="sec"><h2>${t("secReading")}</h2><div class="card prog">${allStories().map(S=>{const b=store.lessons["story-"+S.id];return row(esc(S.title),b?Math.round(b.best*100):null,"#r-"+S.id);}).join("")}</div></div>
   <div class="sec"><h2>${t("secPhrases")}</h2><div class="card prog">${["all",...Object.keys(PHR)].map(c=>{const b=store.phrases[c];return row(catName(c),b?Math.round(b.best*100):null,"#phrases");}).join("")}</div></div>
