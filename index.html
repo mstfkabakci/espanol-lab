@@ -202,6 +202,14 @@ table.conj b{color:var(--accent)}
 .rpara.hide.open .tl2{display:block;padding-left:42px}
 .cmpgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .cmpgrid .story.other{opacity:.85}
+.toast{position:fixed;left:12px;right:12px;margin:0 auto;bottom:24px;transform:translateY(160%);max-width:560px;box-sizing:border-box;background:#1f1b16;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .25s ease;z-index:200}
+.toast.show{transform:translateY(0)}
+.toast span{flex:1}
+.toast button{background:none;border:0;color:#fff;font-size:16px;cursor:pointer;padding:0 2px}
+@media (max-width:720px){.toast{bottom:calc(84px + env(safe-area-inset-bottom))}}
+.vbox{padding:16px 18px}
+.vbox select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line,#ddd);font:inherit;background:var(--card,#fff);color:inherit;margin:6px 0 10px}
+.vbox .vcur{font-weight:600}
 .lvlab{padding:12px 20px 0;display:flex;gap:8px;align-items:center}
 @media (max-width:760px){.cmpgrid{grid-template-columns:1fr}}
 .lvchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -388,17 +396,29 @@ const pct=n=>n===null?"—":t("pct",n);
 const PERS=["yo","tú","él / ella / usted","nosotros","vosotros","ellos / ustedes"];
 let voices=[];
 const canSpeak="speechSynthesis" in window;
-if(canSpeak){try{voices=speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{voices=speechSynthesis.getVoices();};}catch(e){}}
+/* iOS Safari ignores utterance.lang unless a voice is set explicitly, and getVoices() is often empty at page load.
+   So: refresh the voice list on every call, pick a Spanish voice, and always set utterance.voice. */
+const vlang=v=>(v.lang||"").replace("_","-");
+const NOVELTY_V=/^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/i;
+const GOOD_ES_V=/(M[oó]nica|Marisol|Jorge|Paulina|Juan|Google español|Elvira|[AÁ]lvaro|Helena|Laura|Pablo|Luc[ií]a|Dalia|Jimena)/i;
+function loadVoices(){if(!canSpeak)return voices;try{const v=speechSynthesis.getVoices();if(v&&v.length)voices=v;}catch(e){}return voices;}
+const esVoices=()=>loadVoices().filter(v=>/^es\b/i.test(vlang(v)));
+function rankV(v){const l=vlang(v).toLowerCase();let r=l==="es-es"?100:50;if(GOOD_ES_V.test(v.name))r+=20;if(NOVELTY_V.test(v.name))r-=60;if(v.localService)r+=5;return r;}
+function pickEs(){const list=esVoices();if(!list.length)return null;const want=store.settings&&store.settings.voice;if(want){const w=list.find(v=>v.voiceURI===want||v.name===want);if(w)return w;}return list.slice().sort((a,b)=>rankV(b)-rankV(a))[0];}
+if(canSpeak){loadVoices();try{speechSynthesis.addEventListener("voiceschanged",loadVoices);}catch(e){try{speechSynthesis.onvoiceschanged=loadVoices;}catch(_){}}[300,1000,3000].forEach(ms=>setTimeout(loadVoices,ms));}
+let voiceWarned=false;
+function warnNoVoice(){if(voiceWarned||!voices.length)return;voiceWarned=true;toast(t("noEsVoice"),9000);}
+function mkUtt(s,rate){
+  const u=new SpeechSynthesisUtterance(s.replace(/_+/g," "));
+  const v=pickEs();
+  if(v){u.voice=v;u.lang=vlang(v);}else{u.lang="es-ES";warnNoVoice();}
+  u.rate=rate||.92;return u;
+}
 function speak(s){
   if(!canSpeak)return;
-  try{
-    const u=new SpeechSynthesisUtterance(s.replace(/_+/g," "));
-    u.lang="es-ES";u.rate=.92;
-    const v=voices.find(v=>v.lang==="es-ES")||voices.find(v=>v.lang&&v.lang.startsWith("es"));
-    if(v)u.voice=v;
-    speechSynthesis.cancel();speechSynthesis.speak(u);
-  }catch(e){}
+  try{const u=mkUtt(s);speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
 }
+function toast(msg,ms){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el);}el.innerHTML=`<span>${msg}</span><button aria-label="close">✕</button>`;el.classList.add("show");el.querySelector("button").onclick=()=>el.classList.remove("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),ms||5000);}
 const spk=s=>canSpeak?`<button class="spk" title="▶" data-say="${esc(s)}">🔊</button>`:"";
 document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(b){e.preventDefault();e.stopPropagation();speak(b.dataset.say);}});
 
@@ -1578,13 +1598,9 @@ const allStories=()=>[...STORIES,...myStories()];
 const findStory=id=>id==="tmp"?tempStory:allStories().find(s=>s.id===id);
 const lessonTitle=id=>{const L=LESSONS.find(x=>x.id===id);return L?tx(L.title):"";};
 let readingAloud=false;
-function mkUtt(s){
-  const u=new SpeechSynthesisUtterance(s);u.lang="es-ES";u.rate=.9;
-  const v=voices.find(v=>v.lang==="es-ES")||voices.find(v=>v.lang&&v.lang.startsWith("es"));if(v)u.voice=v;return u;
-}
 function readAloud(texts,onDone){
   if(!canSpeak)return;
-  try{speechSynthesis.cancel();texts.forEach((x,i)=>{const u=mkUtt(x);if(i===texts.length-1)u.onend=onDone;speechSynthesis.speak(u);});}catch(e){}
+  try{speechSynthesis.cancel();texts.forEach((x,i)=>{const u=mkUtt(x,.9);if(i===texts.length-1)u.onend=onDone;speechSynthesis.speak(u);});}catch(e){}
 }
 function storyCard(s){
   const b=store.lessons["story-"+s.id];const pc=b?Math.round(b.best*100):null;
@@ -3589,6 +3605,37 @@ quiz:[
 }}
 );
 
+/* ================= Voice settings ================= */
+Object.assign(T.en,{voiceTitle:"🔊 Read-aloud voice",voiceCur:"Spanish voice in use:",voicePick:"Choose another Spanish voice",voiceTest:"▶ Test",voiceSample:"Hola, esto es una prueba. ¿Me entiendes bien?",
+ noEsVoice:"This device isn't offering a Spanish voice, so the text may be read with an English accent. See Progress → 🔊 Read-aloud voice.",
+ voiceNone:"No Spanish voice was found on this device, so the text will be read with the default (English) voice.",
+ voiceHelpIOS:"On iPhone: Settings → Accessibility → Spoken Content → Voices → Spanish, and download a voice (e.g. Mónica). Then close the app completely and open it again.",
+ voiceNoSpeech:"This browser can't read text aloud.",voiceWait:"Looking for voices…",voiceAuto:"(automatic)"});
+Object.assign(T.tr,{voiceTitle:"🔊 Sesli okuma",voiceCur:"Kullanılan İspanyolca ses:",voicePick:"Başka bir İspanyolca ses seç",voiceTest:"▶ Dene",
+ noEsVoice:"Bu cihaz İspanyolca bir ses sunmuyor, bu yüzden metin İngilizce aksanla okunabilir. Çözüm için: İlerleme → 🔊 Sesli okuma.",
+ voiceNone:"Bu cihazda İspanyolca ses bulunamadı; metin varsayılan (İngilizce) sesle okunur.",
+ voiceHelpIOS:"iPhone'da: Ayarlar → Erişilebilirlik → Seslendirilen İçerik → Sesler → İspanyolca yolundan bir ses indir (ör. Mónica). Sonra uygulamayı tamamen kapatıp yeniden aç.",
+ voiceNoSpeech:"Bu tarayıcı sesli okuma yapamıyor.",voiceWait:"Sesler aranıyor…",voiceAuto:"(otomatik)"});
+Object.assign(T.de,{voiceTitle:"🔊 Vorlesestimme",voiceCur:"Verwendete spanische Stimme:",voicePick:"Andere spanische Stimme wählen",voiceTest:"▶ Testen",
+ noEsVoice:"Dieses Gerät bietet keine spanische Stimme an, daher wird der Text evtl. mit englischem Akzent gelesen. Siehe Fortschritt → 🔊 Vorlesestimme.",
+ voiceNone:"Auf diesem Gerät wurde keine spanische Stimme gefunden; der Text wird mit der Standardstimme (Englisch) gelesen.",
+ voiceHelpIOS:"Auf dem iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Spanisch, und eine Stimme laden (z. B. Mónica). Danach die App ganz schließen und neu öffnen.",
+ voiceNoSpeech:"Dieser Browser kann keinen Text vorlesen.",voiceWait:"Stimmen werden gesucht …",voiceAuto:"(automatisch)"});
+function renderVoiceBox(tries){
+  const box=$("#vbox");if(!box)return;
+  if(!canSpeak){box.innerHTML=`<p class="muted" style="margin:0">${t("voiceNoSpeech")}</p>`;return;}
+  const list=esVoices().slice().sort((a,b)=>rankV(b)-rankV(a));
+  if(!list.length&&!voices.length&&(tries||0)<6){box.innerHTML=`<p class="muted" style="margin:0">${t("voiceWait")}</p>`;setTimeout(()=>renderVoiceBox((tries||0)+1),500);return;}
+  const cur=pickEs();
+  box.innerHTML=list.length?`<div>${t("voiceCur")} <span class="vcur">${esc(cur.name)} · ${esc(vlang(cur))}</span></div>
+   <label class="muted" style="display:block;margin-top:10px;font-size:13.5px">${t("voicePick")}</label>
+   <select id="vsel"><option value="">${t("voiceAuto")}</option>${list.map(v=>`<option value="${esc(v.voiceURI||v.name)}" ${store.settings.voice&&(store.settings.voice===v.voiceURI||store.settings.voice===v.name)?"selected":""}>${esc(v.name)} · ${esc(vlang(v))}</option>`).join("")}</select>
+   <button class="btn" id="vtest">${t("voiceTest")}</button>
+   <p class="muted" style="font-size:13px;margin:12px 0 0">${t("voiceHelpIOS")}</p>`
+  :`<p style="margin:0 0 8px">${t("voiceNone")}</p><p class="muted" style="font-size:13.5px;margin:0">${t("voiceHelpIOS")}</p>`;
+  const sel=$("#vsel");if(sel)sel.onchange=()=>{store.settings.voice=sel.value||null;save();renderVoiceBox();speak(T.en.voiceSample);};
+  const tb=$("#vtest");if(tb)tb.onclick=()=>speak(T.en.voiceSample);
+}
 /* ================= Progress ================= */
 function renderProgress(){
   const d=store.drill;const done=LESSONS.filter(L=>store.lessons[L.id]).length;
@@ -3601,7 +3648,9 @@ function renderProgress(){
   <div class="sec"><h2>${t("secReading")}</h2><div class="card prog">${CLASSICS.flatMap(c=>LV.filter(l=>store.lessons["story-c-"+c.id+"-"+l.toLowerCase()]).map(l=>{const b=store.lessons["story-c-"+c.id+"-"+l.toLowerCase()];return row(esc(c.title)+" · "+l,Math.round(b.best*100),"#c-"+c.id+"-"+l.toLowerCase());})).join("")}${allStories().map(S=>{const b=store.lessons["story-"+S.id];return row(esc(S.title),b?Math.round(b.best*100):null,"#r-"+S.id);}).join("")}</div></div>
   <div class="sec"><h2>${t("secPhrases")}</h2><div class="card prog">${["all",...Object.keys(PHR)].map(c=>{const b=store.phrases[c];return row(catName(c),b?Math.round(b.best*100):null,"#phrases");}).join("")}</div></div>
   <div class="sec"><h2>${t("weakVerbs")}</h2>${weak.length?`<div class="chips">${weak.map(([v,n])=>`<span class="chip">${t("nMistakes",v,n)}</span>`).join("")}</div><p class="muted">${t("weakNote")}</p>`:`<p class="muted">${t("noData")}</p>`}</div>
+  <div class="sec"><h2>${t("voiceTitle")}</h2><div class="card vbox" id="vbox"></div></div>
   <button class="btn ghost" id="reset">${t("reset")}</button>`;
+  renderVoiceBox();
   $("#reset").onclick=()=>{
     $("#modal").innerHTML=`<div class="modal"><div class="card"><h3>${t("sure")}</h3><p class="muted">${t("resetWarn")}</p><div class="btns"><button class="btn" id="yes">${t("yesReset")}</button><button class="btn ghost" id="no">${t("cancel")}</button></div></div></div>`;
     $("#no").onclick=()=>$("#modal").innerHTML="";
