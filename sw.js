@@ -1,5 +1,5 @@
 /* Español Lab service worker: works offline, picks up updates when online. */
-const CACHE = "espanol-lab-202611041240";
+const CACHE = "espanol-lab-202611041250";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./favicon-32.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
