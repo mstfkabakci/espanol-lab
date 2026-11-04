@@ -997,6 +997,7 @@ function route(){
   ({tenses:renderTenses,phrases:renderPhrases,reading:renderReading,words:renderWords,drill:renderDrill,progress:renderProgress})[tab]();
 }
 window.addEventListener("hashchange",route);
+window.addEventListener("hashchange",()=>{try{statsView();}catch(e){}});
 
 /* ================= Tenses home ================= */
 function renderTenses(){
@@ -1099,6 +1100,7 @@ function next(){quiz.i++;if(quiz.i>=quiz.qs.length)showResult();else renderQ();}
 function showResult(){
   const {L,score,qs,wrong}=quiz;const r=score/qs.length;
   if(quiz.full&&!L.noSave){const prev=store.lessons[L.id]||{best:0,attempts:0};store.lessons[L.id]={best:Math.max(prev.best,r),attempts:prev.attempts+1,last:r};save();}
+  try{gc("quiz-done",true);}catch(e){}
   const msg=r===1?t("res100"):r>=.8?t("res80"):r>=.5?t("res50"):t("res0");
   $("#quiz").innerHTML=`<div class="result"><div class="big">${score}/${qs.length}</div><p style="font-size:18px">${msg}</p>
   ${wrong.length?`<div class="revlist"><b>${t("yourMistakes")}</b>${wrong.map(w=>{const c=w.q.opts?w.q.correct:w.q.a[0];const qq=qText(w.q);return `<div>${esc(qq.includes("___")?fillSentence(w.q,c):qq+" → "+c)}<br><span class="muted">${esc(t("yourAnswer",w.given))}</span></div>`;}).join("")}</div>`:""}
@@ -2065,6 +2067,7 @@ async function createWord(raw,extra={}){
   if(extra.note)nw.note=extra.note;
   if(extra.example&&extra.example.es&&!(nw.ex||[]).some(x=>x.es===extra.example.es))nw.ex=[...(nw.ex||[]),extra.example];
   store.words=[nw,...wordsList()];save();
+  try{gc("word-added",true);}catch(e){}
   return {w:nw,status:w?"ok":status,created:true};
 }
 async function addWord(raw){
@@ -3896,6 +3899,61 @@ L_("serestar").quiz.push(
  dq("La mesa ___ de madera.","","The table is made of wood.","Masa ahşap.","Der Tisch ist aus Holz.",["es","está"],B("Material → ser.","Malzeme → ser.","Material → ser."))
 );
 
+/* ================= Anonymous usage counting (GoatCounter: no cookies, no IDs) ================= */
+const GC_CODE="espanol-lab";
+Object.assign(T.en,{statsTitle:"📊 Anonymous usage count",statsDesc:"To see how many people use the app and which parts, page names are counted with GoatCounter. No cookies, no IDs: your words, results and stories are never sent. General info such as country and device type is counted.",statsOff:"Don't count usage on this device",statsLocal:"(Only active in the published app.)"});
+Object.assign(T.tr,{statsTitle:"📊 Anonim kullanım sayımı",statsDesc:"Uygulamayı kaç kişinin ve hangi bölümlerini kullandığını görmek için sayfa adları GoatCounter ile sayılıyor. Çerez yok, kimlik yok: yazdığın kelimeler, sonuçların ve hikâyelerin asla gönderilmiyor. Ülke ve cihaz türü gibi genel bilgiler sayılıyor.",statsOff:"Bu cihazdaki kullanımı sayma",statsLocal:"(Sadece yayındaki uygulamada çalışır.)"});
+Object.assign(T.de,{statsTitle:"📊 Anonyme Nutzungszählung",statsDesc:"Um zu sehen, wie viele Menschen die App nutzen und welche Teile, werden Seitennamen mit GoatCounter gezählt. Keine Cookies, keine IDs: Deine Wörter, Ergebnisse und Geschichten werden nie gesendet. Allgemeine Infos wie Land und Gerätetyp werden gezählt.",statsOff:"Nutzung auf diesem Gerät nicht zählen",statsLocal:"(Nur in der veröffentlichten App aktiv.)"});
+const statsSite=()=>/\.github\.io$/.test(location.hostname);
+const statsOn=()=>statsSite()&&!(store.settings&&store.settings.noStats);
+let gcQueue=[];
+function gc(path,event){
+  if(!statsOn())return;
+  const d={path,title:path,event:!!event};
+  const g=window.goatcounter;
+  if(g&&typeof g.count==="function"){try{g.count(d);}catch(e){}}else gcQueue.push(d);
+}
+function loadGC(){
+  if(!statsOn()||document.getElementById("gcjs"))return;
+  window.goatcounter=Object.assign(window.goatcounter||{},{no_onload:true});
+  const sc=document.createElement("script");sc.id="gcjs";sc.async=true;sc.src="https://gc.zgo.at/count.js";
+  sc.dataset.goatcounter=`https://${GC_CODE}.goatcounter.com/count`;
+  sc.onload=()=>{const q=gcQueue;gcQueue=[];q.forEach(d=>{try{window.goatcounter.count(d);}catch(e){}});};
+  document.head.appendChild(sc);
+}
+/* page names only — never word text or personal story titles */
+function routeName(h){
+  if(!h)return "/tenses";
+  if(h.startsWith("l-"))return "/lesson/"+h.slice(2);
+  if(h.startsWith("c-"))return "/classic/"+h.slice(2).replace(/-(a1|a2|b1|b2)$/,"/$1");
+  if(h.startsWith("r-"))return "/story/"+(STORIES.some(x=>x.id===h.slice(2))?h.slice(2):"mine");
+  if(h.startsWith("w-"))return "/words/detail";
+  if(h.startsWith("practice"))return "/practice"+(h.length>9?"/"+h.slice(9):"");
+  return TABS.some(x=>x[0]===h)?"/"+h:"/other";
+}
+const localDay=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+function statsDaily(){
+  const st=store.stats||(store.stats={});const today=localDay();
+  if(st.last===today)return;
+  if(!st.first)st.first=today;
+  st.days=(st.days||0)+1;st.last=today;save();
+  const n=st.days,b=n<=7?String(n):n<=14?"8-14":n<=30?"15-30":"31+";
+  const wk=Math.floor((Date.parse(today)-Date.parse(st.first))/864e5/7);
+  const app=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+  gc("active-day-"+b,true);
+  gc("week-since-first-"+(wk<8?wk:"8+"),true);
+  gc("open-"+(app?"installed-app":"browser"),true);
+  gc("lang-"+LANG,true);
+}
+let lastGcPath="";
+function statsView(){const pth=routeName((location.hash||"").slice(1));if(pth===lastGcPath)return;lastGcPath=pth;gc(pth,false);}
+function renderStatsBox(){
+  const el=$("#sbox");if(!el)return;
+  el.innerHTML=`<p class="muted" style="margin:0 0 10px;font-size:14px">${t("statsDesc")}</p>
+  <label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" id="noStats" ${store.settings.noStats?"checked":""} style="width:20px;height:20px"> <span>${t("statsOff")}</span></label>
+  ${statsSite()?"":`<p class="muted" style="margin:8px 0 0;font-size:13px">${t("statsLocal")}</p>`}`;
+  $("#noStats").onchange=e=>{store.settings.noStats=e.target.checked;save();if(!e.target.checked){loadGC();}};
+}
 /* ================= Progress ================= */
 function renderProgress(){
   const d=store.drill;const done=LESSONS.filter(L=>store.lessons[L.id]).length;
@@ -3909,8 +3967,9 @@ function renderProgress(){
   <div class="sec"><h2>${t("secPhrases")}</h2><div class="card prog">${["all",...Object.keys(PHR)].map(c=>{const b=store.phrases[c];return row(catName(c),b?Math.round(b.best*100):null,"#phrases");}).join("")}</div></div>
   <div class="sec"><h2>${t("weakVerbs")}</h2>${weak.length?`<div class="chips">${weak.map(([v,n])=>`<span class="chip">${t("nMistakes",v,n)}</span>`).join("")}</div><p class="muted">${t("weakNote")}</p>`:`<p class="muted">${t("noData")}</p>`}</div>
   <div class="sec"><h2>${t("voiceTitle")}</h2><div class="card vbox" id="vbox"></div></div>
+  <div class="sec"><h2>${t("statsTitle")}</h2><div class="card vbox" id="sbox"></div></div>
   <button class="btn ghost" id="reset">${t("reset")}</button>`;
-  renderVoiceBox();
+  renderVoiceBox();renderStatsBox();
   $("#reset").onclick=()=>{
     $("#modal").innerHTML=`<div class="modal"><div class="card"><h3>${t("sure")}</h3><p class="muted">${t("resetWarn")}</p><div class="btns"><button class="btn" id="yes">${t("yesReset")}</button><button class="btn ghost" id="no">${t("cancel")}</button></div></div></div>`;
     $("#no").onclick=()=>$("#modal").innerHTML="";
@@ -3920,6 +3979,7 @@ function renderProgress(){
 
 renderHeader();
 route();
+try{loadGC();statsView();statsDaily();}catch(e){}
 </script>
 <div id="installHint" hidden></div>
 <script>
