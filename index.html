@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Español Lab</title>
+<script>window.APP_BUILD="202611051219";</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="favicon-32.png">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -317,12 +318,48 @@ header.top{padding-top:env(safe-area-inset-top)}
   table.conj td:first-child{width:auto}
   .prow .cat{display:none}
 }
+.fbbtn[hidden]{display:none}
+.fbbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--card);text-decoration:none;font-size:17px;line-height:1}
+.fbbtn.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.fbcard{padding:18px;display:flex;flex-direction:column;gap:12px}
+.fblab{font-weight:700}
+.fbtypes{margin:0}
+.fbtypes .chip{cursor:pointer}
+#fbText{min-height:170px;font-size:16px}
+.fbmeta{display:flex;gap:10px;align-items:center;cursor:pointer;font-size:14.5px}
+.fbmeta input{width:20px;height:20px;flex:none}
+.fbinfo{font-size:13px;margin-top:-6px;word-break:break-word}
+.fbpriv{font-size:13px;margin:0}
+.fbpriv:empty{display:none}
+.fbwarn{margin:0;padding:10px 12px;border-radius:10px;background:var(--gold-soft);font-size:14px}
+.fbres{padding:12px 14px;border-radius:10px;font-size:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fbres .btn{padding:8px 14px;font-size:14px}
+.fbres.ok{background:color-mix(in srgb,#2e9e5b 14%,var(--card))}
+.fbres.wait{background:var(--gold-soft)}
+.fbres.bad{background:color-mix(in srgb,#d9534f 14%,var(--card))}
+.lvcard{padding:16px 18px;margin-bottom:14px}
+.lvcard .lab{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:8px}
+.lvseg{display:flex;width:100%}
+.lvseg button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;cursor:pointer}
+.lvseg button b{font-size:17px}
+.lvseg button small{font-size:12px;font-weight:600;opacity:.8}
+.lvnote{font-size:13.5px;margin:10px 0 0}
+.vlist{margin-top:10px}
+.vlist summary{cursor:pointer;font-weight:700;padding:6px 0}
+.vgrp{margin-top:12px}
+.vgh{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:2px 10px}
+.vrow{display:flex;gap:6px;align-items:baseline;text-align:left;border:none;background:none;padding:5px 6px;border-radius:8px;color:var(--ink);font-size:14.5px;cursor:pointer;min-width:0}
+.vrow:hover{background:var(--bg)}
+.vrow span{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.vrow .irrdot{color:var(--accent);font-style:normal;font-weight:900}
 </style>
 </head>
 <body>
 <header class="top"><div class="topin">
   <a class="logo" href="#tenses"><span class="dot"></span>Español Lab</a>
   <select class="langsel" id="langSel" style="margin-left:auto"></select>
+  <a class="fbbtn" id="fbBtn" href="#feedback">💡</a>
   <nav class="tabs" id="tabs"></nav>
 </div></header>
 <main class="wrap" id="app"></main>
@@ -374,7 +411,8 @@ phrTitle:"Everyday phrases",phrDesc:"Useful patterns for everyday life in Spain.
 all:"✨ All",list:"List",cards:"Cards",test:"Test",search:"Search…",noResults:"No results.",cardHint:"Tap the card to flip it",again:"↻ Show again",knew:"✓ Got it",
 deckDone:"You finished the deck. Known first time: <b>{0}</b>",reshuffle:"Shuffle again",whatMeans:"What does this mean?",whichSpanish:"Which one is the Spanish?",
 phrMore:"Study a bit more with the cards, then try again.",newTest:"New test",
-drillTitle:"Conjugation drill",drillDesc:"{0} verbs and {1} tenses. You get a random verb, person and tense, and you type the conjugation. Verbs you got wrong come up more often.",
+drillTitle:"Conjugation drill",drillLevel:"LEVEL",nVerbs:"{0} verbs",drillLvNote:"{0} verbs at this level, {1} of them irregular. Each level includes the ones before it.",drillList:"📋 Verb list",drillListHint:"Tap a verb to practise it next. • = irregular",
+drillDesc:"{0} verbs and {1} tenses. You get a random verb, person and tense, and you type the conjugation. Verbs you got wrong come up more often.",
 streak:"Streak 🔥",bestStreak:"Best streak",accuracy:"Accuracy",totalQ:"Questions",irregular:"irregular",irregularVerb:"irregular verb",egPerf:"e.g. he hablado",typeConj:"type the conjugation…",
 dontKnow:"I don't know, show me",tensesCap:"TENSES",verbsCap:"VERBS",allV:"All",regV:"Regular",irrV:"Irregular",
 strict:"Accents required (á, é, í…). When off, answers without accents count as correct with a warning.",okAccentX:"Correct, but watch the accent: {0}",
@@ -407,7 +445,8 @@ phrTitle:"Günlük ifadeler",phrDesc:"İspanya'da gündelik hayatta en çok işi
 all:"✨ Tümü",list:"Liste",cards:"Kartlar",test:"Test",search:"Ara…",noResults:"Sonuç yok.",cardHint:"Karta tıkla, çevir",again:"↻ Tekrar göster",knew:"✓ Bildim",
 deckDone:"Desteyi bitirdin. İlk seferde bildiğin: <b>{0}</b>",reshuffle:"Yeniden karıştır",whatMeans:"Bu ne demek?",whichSpanish:"İspanyolcası hangisi?",
 phrMore:"Kartlarla biraz daha çalış, sonra tekrar dene.",newTest:"Yeni test",
-drillTitle:"Çekim antrenmanı",drillDesc:"{0} fiil ve {1} zaman var. Rastgele bir fiil, şahıs ve zaman gelir, sen çekimi yazarsın. Daha önce yanlış yaptığın fiiller daha sık karşına çıkar.",
+drillTitle:"Çekim antrenmanı",drillLevel:"SEVİYE",nVerbs:"{0} fiil",drillLvNote:"Bu seviyede {0} fiil var, {1} tanesi düzensiz. Her seviye öncekileri de kapsar.",drillList:"📋 Fiil listesi",drillListHint:"Bir fiile dokun, sıradaki soru o fiilden gelsin. • = düzensiz",
+drillDesc:"{0} fiil ve {1} zaman var. Rastgele bir fiil, şahıs ve zaman gelir, sen çekimi yazarsın. Daha önce yanlış yaptığın fiiller daha sık karşına çıkar.",
 streak:"Seri 🔥",bestStreak:"En iyi seri",accuracy:"Doğruluk",totalQ:"Toplam soru",irregular:"düzensiz",irregularVerb:"düzensiz fiil",egPerf:"ör. he hablado",typeConj:"çekimi yaz…",
 dontKnow:"Bilmiyorum, göster",tensesCap:"ZAMANLAR",verbsCap:"FİİLLER",allV:"Hepsi",regV:"Düzenli",irrV:"Düzensiz",
 strict:"Aksanlar zorunlu (á, é, í…). Kapalıyken aksansız cevap doğru sayılır ama uyarı verilir.",okAccentX:"Doğru, ama aksana dikkat: {0}",
@@ -936,37 +975,345 @@ conocer:{tr:"tanımak",en:"to know (people/places)",irr:1,pres:["conozco","conoc
 leer:{tr:"okumak",en:"to read",irr:1,indef:["leí","leíste","leyó","leímos","leísteis","leyeron"],part:"leído"},
 traer:{tr:"getirmek",en:"to bring",irr:1,pres:["traigo","traes","trae","traemos","traéis","traen"],indef:["traje","trajiste","trajo","trajimos","trajisteis","trajeron"],part:"traído"}
 };
+/* Leveled verb list: A1 40 · A2 100 · B1 200 · B2 300 (cumulative) */
+Object.entries({"ser": "A1", "estar": "A1", "tener": "A1", "ir": "A1", "hacer": "A1", "poder": "A1", "querer": "A1", "decir": "A1", "venir": "A1", "poner": "A1", "saber": "A1", "salir": "A1", "ver": "A1", "dar": "A1", "hablar": "A1", "trabajar": "A1", "comer": "A1", "vivir": "A1", "escribir": "A1", "estudiar": "A1", "comprar": "A1", "beber": "A1", "aprender": "A1", "abrir": "A1", "llegar": "A1", "tomar": "A1", "llamar": "A1", "necesitar": "A1", "leer": "A1", "dormir": "A1", "pensar": "A1", "volver": "A1", "jugar": "A1", "conocer": "A1", "empezar": "A1", "buscar": "A2", "pagar": "A2", "viajar": "A2", "cocinar": "A2", "vender": "A2", "recibir": "A2", "decidir": "A2", "pedir": "A2", "traer": "A2"}).forEach(([k,l])=>{if(V[k])V[k].lv=l;});
+if(V.ser){V.ser.en="to be (who / what)";V.ser.tr="olmak (kim / ne)";V.ser.de="sein (wer / was)";}
+Object.assign(V,{
+"entender":{"lv": "A1", "en": "to understand", "tr": "anlamak", "de": "verstehen", "sc": "ie"},
+"escuchar":{"lv": "A1", "en": "to listen (to)", "tr": "dinlemek", "de": "(zu)hören"},
+"mirar":{"lv": "A1", "en": "to look (at)", "tr": "bakmak", "de": "(an)schauen"},
+"cerrar":{"lv": "A1", "en": "to close", "tr": "kapatmak", "de": "schließen", "sc": "ie"},
+"preferir":{"lv": "A1", "en": "to prefer", "tr": "tercih etmek", "de": "bevorzugen", "sc": "ie-i"},
+"ayudar":{"lv": "A2", "en": "to help", "tr": "yardım etmek", "de": "helfen"},
+"bailar":{"lv": "A2", "en": "to dance", "tr": "dans etmek", "de": "tanzen"},
+"cantar":{"lv": "A2", "en": "to sing", "tr": "şarkı söylemek", "de": "singen"},
+"cambiar":{"lv": "A2", "en": "to change", "tr": "değiştirmek", "de": "(ver)ändern"},
+"caminar":{"lv": "A2", "en": "to walk", "tr": "yürümek", "de": "(zu Fuß) gehen"},
+"cenar":{"lv": "A2", "en": "to have dinner", "tr": "akşam yemeği yemek", "de": "zu Abend essen"},
+"desayunar":{"lv": "A2", "en": "to have breakfast", "tr": "kahvaltı etmek", "de": "frühstücken"},
+"almorzar":{"lv": "A2", "en": "to have lunch", "tr": "öğle yemeği yemek", "de": "zu Mittag essen", "sc": "ue"},
+"comprender":{"lv": "A2", "en": "to understand", "tr": "anlamak, kavramak", "de": "verstehen, begreifen"},
+"correr":{"lv": "A2", "en": "to run", "tr": "koşmak", "de": "laufen, rennen"},
+"creer":{"lv": "A2", "en": "to believe, to think", "tr": "inanmak, sanmak", "de": "glauben"},
+"deber":{"lv": "A2", "en": "must, to owe", "tr": "-meli, borçlu olmak", "de": "müssen, schulden"},
+"dejar":{"lv": "A2", "en": "to leave, to let", "tr": "bırakmak, izin vermek", "de": "lassen"},
+"encontrar":{"lv": "A2", "en": "to find", "tr": "bulmak", "de": "finden", "sc": "ue"},
+"enseñar":{"lv": "A2", "en": "to teach, to show", "tr": "öğretmek, göstermek", "de": "lehren, zeigen"},
+"esperar":{"lv": "A2", "en": "to wait, to hope", "tr": "beklemek, ummak", "de": "warten, hoffen"},
+"ganar":{"lv": "A2", "en": "to win, to earn", "tr": "kazanmak", "de": "gewinnen, verdienen"},
+"gastar":{"lv": "A2", "en": "to spend", "tr": "harcamak", "de": "ausgeben"},
+"limpiar":{"lv": "A2", "en": "to clean", "tr": "temizlemek", "de": "putzen"},
+"llevar":{"lv": "A2", "en": "to carry, to wear, to take", "tr": "taşımak, giymek, götürmek", "de": "tragen, mitnehmen"},
+"nadar":{"lv": "A2", "en": "to swim", "tr": "yüzmek", "de": "schwimmen"},
+"olvidar":{"lv": "A2", "en": "to forget", "tr": "unutmak", "de": "vergessen"},
+"oír":{"lv": "A2", "en": "to hear", "tr": "duymak", "de": "hören", "pres": ["oigo", "oyes", "oye", "oímos", "oís", "oyen"]},
+"pasar":{"lv": "A2", "en": "to pass, to spend (time)", "tr": "geçmek, (zaman) geçirmek", "de": "vorbeigehen, verbringen"},
+"perder":{"lv": "A2", "en": "to lose, to miss", "tr": "kaybetmek, kaçırmak", "de": "verlieren, verpassen", "sc": "ie"},
+"preguntar":{"lv": "A2", "en": "to ask", "tr": "sormak", "de": "fragen"},
+"preparar":{"lv": "A2", "en": "to prepare", "tr": "hazırlamak", "de": "vorbereiten"},
+"recordar":{"lv": "A2", "en": "to remember", "tr": "hatırlamak", "de": "sich erinnern an", "sc": "ue"},
+"repetir":{"lv": "A2", "en": "to repeat", "tr": "tekrarlamak", "de": "wiederholen", "sc": "i"},
+"responder":{"lv": "A2", "en": "to answer", "tr": "cevap vermek", "de": "antworten"},
+"sentir":{"lv": "A2", "en": "to feel, to be sorry", "tr": "hissetmek, üzülmek", "de": "fühlen, bedauern", "sc": "ie-i"},
+"servir":{"lv": "A2", "en": "to serve, to be useful", "tr": "servis yapmak, işe yaramak", "de": "servieren, nützen", "sc": "i"},
+"subir":{"lv": "A2", "en": "to go up, to raise", "tr": "çıkmak, yükseltmek", "de": "hinaufgehen, erhöhen"},
+"terminar":{"lv": "A2", "en": "to finish", "tr": "bitirmek", "de": "beenden"},
+"usar":{"lv": "A2", "en": "to use", "tr": "kullanmak", "de": "benutzen"},
+"visitar":{"lv": "A2", "en": "to visit", "tr": "ziyaret etmek", "de": "besuchen"},
+"volar":{"lv": "A2", "en": "to fly", "tr": "uçmak", "de": "fliegen", "sc": "ue"},
+"conducir":{"lv": "A2", "en": "to drive", "tr": "araba sürmek", "de": "(Auto) fahren"},
+"contar":{"lv": "A2", "en": "to count, to tell", "tr": "saymak, anlatmak", "de": "zählen, erzählen", "sc": "ue"},
+"descansar":{"lv": "A2", "en": "to rest", "tr": "dinlenmek", "de": "sich ausruhen"},
+"enviar":{"lv": "A2", "en": "to send", "tr": "göndermek", "de": "schicken", "acc": 1},
+"invitar":{"lv": "A2", "en": "to invite", "tr": "davet etmek", "de": "einladen"},
+"mostrar":{"lv": "A2", "en": "to show", "tr": "göstermek", "de": "zeigen", "sc": "ue"},
+"nacer":{"lv": "A2", "en": "to be born", "tr": "doğmak", "de": "geboren werden"},
+"morir":{"lv": "A2", "en": "to die", "tr": "ölmek", "de": "sterben", "sc": "ue-u", "part": "muerto"},
+"regalar":{"lv": "A2", "en": "to give (as a gift)", "tr": "hediye etmek", "de": "schenken"},
+"alquilar":{"lv": "A2", "en": "to rent", "tr": "kiralamak", "de": "mieten"},
+"entrar":{"lv": "A2", "en": "to go in, to enter", "tr": "girmek", "de": "hineingehen"},
+"coger":{"lv": "A2", "en": "to take, to catch", "tr": "almak, (taşıta) binmek", "de": "nehmen"},
+"seguir":{"lv": "A2", "en": "to follow, to carry on", "tr": "takip etmek, devam etmek", "de": "folgen, weitermachen", "sc": "i"},
+"bajar":{"lv": "A2", "en": "to go down, to lower", "tr": "inmek, indirmek", "de": "hinuntergehen, senken"},
+"aceptar":{"lv": "B1", "en": "to accept", "tr": "kabul etmek", "de": "annehmen, akzeptieren"},
+"acabar":{"lv": "B1", "en": "to finish, to end", "tr": "bitirmek, sona ermek", "de": "beenden, enden"},
+"alcanzar":{"lv": "B1", "en": "to reach", "tr": "ulaşmak, yetişmek", "de": "erreichen"},
+"apagar":{"lv": "B1", "en": "to switch off", "tr": "kapatmak, söndürmek", "de": "ausschalten"},
+"aparecer":{"lv": "B1", "en": "to appear", "tr": "ortaya çıkmak, görünmek", "de": "erscheinen"},
+"añadir":{"lv": "B1", "en": "to add", "tr": "eklemek", "de": "hinzufügen"},
+"apoyar":{"lv": "B1", "en": "to support", "tr": "desteklemek", "de": "unterstützen"},
+"arreglar":{"lv": "B1", "en": "to fix, to tidy", "tr": "tamir etmek, düzeltmek", "de": "reparieren, in Ordnung bringen"},
+"atender":{"lv": "B1", "en": "to attend to, to serve", "tr": "ilgilenmek, hizmet etmek", "de": "sich kümmern um, bedienen", "sc": "ie"},
+"aumentar":{"lv": "B1", "en": "to increase", "tr": "artırmak, artmak", "de": "erhöhen, steigen"},
+"avisar":{"lv": "B1", "en": "to let know, to warn", "tr": "haber vermek, uyarmak", "de": "Bescheid sagen, warnen"},
+"borrar":{"lv": "B1", "en": "to delete, to erase", "tr": "silmek", "de": "löschen"},
+"caer":{"lv": "B1", "en": "to fall", "tr": "düşmek", "de": "fallen", "yo": "caigo"},
+"calentar":{"lv": "B1", "en": "to heat (up)", "tr": "ısıtmak", "de": "aufwärmen, erhitzen", "sc": "ie"},
+"cargar":{"lv": "B1", "en": "to load, to charge", "tr": "yüklemek, şarj etmek", "de": "laden, aufladen"},
+"celebrar":{"lv": "B1", "en": "to celebrate", "tr": "kutlamak", "de": "feiern"},
+"colgar":{"lv": "B1", "en": "to hang (up)", "tr": "asmak, (telefonu) kapatmak", "de": "aufhängen, auflegen", "sc": "ue"},
+"compartir":{"lv": "B1", "en": "to share", "tr": "paylaşmak", "de": "teilen"},
+"conseguir":{"lv": "B1", "en": "to get, to achieve", "tr": "elde etmek, başarmak", "de": "bekommen, erreichen", "base": "seguir"},
+"construir":{"lv": "B1", "en": "to build", "tr": "inşa etmek", "de": "bauen"},
+"contestar":{"lv": "B1", "en": "to answer", "tr": "cevaplamak", "de": "beantworten"},
+"continuar":{"lv": "B1", "en": "to continue", "tr": "devam etmek", "de": "fortsetzen", "acc": 1},
+"convencer":{"lv": "B1", "en": "to convince", "tr": "ikna etmek", "de": "überzeugen"},
+"cortar":{"lv": "B1", "en": "to cut", "tr": "kesmek", "de": "schneiden"},
+"crecer":{"lv": "B1", "en": "to grow", "tr": "büyümek", "de": "wachsen"},
+"cruzar":{"lv": "B1", "en": "to cross", "tr": "karşıya geçmek", "de": "überqueren"},
+"cubrir":{"lv": "B1", "en": "to cover", "tr": "örtmek, kapsamak", "de": "bedecken", "part": "cubierto"},
+"cuidar":{"lv": "B1", "en": "to look after", "tr": "bakmak, ilgilenmek", "de": "sich kümmern um, pflegen"},
+"cumplir":{"lv": "B1", "en": "to fulfil, to turn (age)", "tr": "yerine getirmek, (yaşına) girmek", "de": "erfüllen, (Jahre) alt werden"},
+"defender":{"lv": "B1", "en": "to defend", "tr": "savunmak", "de": "verteidigen", "sc": "ie"},
+"demostrar":{"lv": "B1", "en": "to show, to prove", "tr": "kanıtlamak, göstermek", "de": "beweisen, zeigen", "sc": "ue"},
+"depender":{"lv": "B1", "en": "to depend", "tr": "bağlı olmak", "de": "abhängen"},
+"describir":{"lv": "B1", "en": "to describe", "tr": "tarif etmek, betimlemek", "de": "beschreiben", "base": "escribir"},
+"descubrir":{"lv": "B1", "en": "to discover", "tr": "keşfetmek", "de": "entdecken", "base": "cubrir"},
+"desaparecer":{"lv": "B1", "en": "to disappear", "tr": "kaybolmak", "de": "verschwinden"},
+"desarrollar":{"lv": "B1", "en": "to develop", "tr": "geliştirmek", "de": "entwickeln"},
+"despedir":{"lv": "B1", "en": "to say goodbye to, to dismiss", "tr": "uğurlamak, işten çıkarmak", "de": "verabschieden, entlassen", "base": "pedir"},
+"destruir":{"lv": "B1", "en": "to destroy", "tr": "yok etmek", "de": "zerstören"},
+"devolver":{"lv": "B1", "en": "to give back, to return", "tr": "geri vermek, iade etmek", "de": "zurückgeben", "base": "volver"},
+"dibujar":{"lv": "B1", "en": "to draw", "tr": "çizmek", "de": "zeichnen"},
+"dirigir":{"lv": "B1", "en": "to direct, to manage", "tr": "yönetmek", "de": "leiten"},
+"discutir":{"lv": "B1", "en": "to argue, to discuss", "tr": "tartışmak", "de": "streiten, diskutieren"},
+"disfrutar":{"lv": "B1", "en": "to enjoy", "tr": "keyfini çıkarmak", "de": "genießen"},
+"elegir":{"lv": "B1", "en": "to choose", "tr": "seçmek", "de": "wählen", "sc": "i"},
+"encender":{"lv": "B1", "en": "to switch on, to light", "tr": "açmak, yakmak", "de": "einschalten, anzünden", "sc": "ie"},
+"entregar":{"lv": "B1", "en": "to hand in, to deliver", "tr": "teslim etmek", "de": "abgeben, liefern"},
+"escoger":{"lv": "B1", "en": "to choose, to pick", "tr": "seçmek", "de": "auswählen"},
+"evitar":{"lv": "B1", "en": "to avoid", "tr": "kaçınmak", "de": "vermeiden"},
+"explicar":{"lv": "B1", "en": "to explain", "tr": "açıklamak", "de": "erklären"},
+"fumar":{"lv": "B1", "en": "to smoke", "tr": "sigara içmek", "de": "rauchen"},
+"funcionar":{"lv": "B1", "en": "to work (machines)", "tr": "çalışmak (makine)", "de": "funktionieren"},
+"guardar":{"lv": "B1", "en": "to keep, to save", "tr": "saklamak, kaydetmek", "de": "aufbewahren, speichern"},
+"huir":{"lv": "B2", "en": "to flee", "tr": "kaçmak", "de": "fliehen", "pres": ["huyo", "huyes", "huye", "huimos", "huis", "huyen"], "indef": ["hui", "huiste", "huyó", "huimos", "huisteis", "huyeron"]},
+"imaginar":{"lv": "B1", "en": "to imagine", "tr": "hayal etmek", "de": "sich vorstellen"},
+"incluir":{"lv": "B1", "en": "to include", "tr": "dahil etmek", "de": "einschließen"},
+"intentar":{"lv": "B1", "en": "to try", "tr": "denemek, uğraşmak", "de": "versuchen"},
+"lavar":{"lv": "B1", "en": "to wash", "tr": "yıkamak", "de": "waschen"},
+"lograr":{"lv": "B1", "en": "to achieve, to manage", "tr": "başarmak", "de": "erreichen, schaffen"},
+"mantener":{"lv": "B1", "en": "to keep, to maintain", "tr": "korumak, sürdürmek", "de": "(aufrecht)erhalten", "base": "tener"},
+"medir":{"lv": "B1", "en": "to measure", "tr": "ölçmek", "de": "messen", "sc": "i"},
+"mentir":{"lv": "B1", "en": "to lie", "tr": "yalan söylemek", "de": "lügen", "sc": "ie-i"},
+"merecer":{"lv": "B1", "en": "to deserve", "tr": "hak etmek", "de": "verdienen"},
+"meter":{"lv": "B1", "en": "to put in", "tr": "sokmak, koymak", "de": "hineinstecken"},
+"molestar":{"lv": "B1", "en": "to bother", "tr": "rahatsız etmek", "de": "stören"},
+"mover":{"lv": "B1", "en": "to move", "tr": "hareket ettirmek", "de": "bewegen", "sc": "ue"},
+"negar":{"lv": "B1", "en": "to deny", "tr": "inkâr etmek, reddetmek", "de": "leugnen, verneinen", "sc": "ie"},
+"notar":{"lv": "B1", "en": "to notice", "tr": "fark etmek", "de": "bemerken"},
+"obtener":{"lv": "B1", "en": "to obtain", "tr": "elde etmek", "de": "erhalten", "base": "tener"},
+"ofrecer":{"lv": "B1", "en": "to offer", "tr": "sunmak, teklif etmek", "de": "anbieten"},
+"oler":{"lv": "B1", "en": "to smell", "tr": "koklamak, kokmak", "de": "riechen", "pres": ["huelo", "hueles", "huele", "olemos", "oléis", "huelen"], "subj": ["huela", "huelas", "huela", "olamos", "oláis", "huelan"]},
+"organizar":{"lv": "B1", "en": "to organise", "tr": "düzenlemek", "de": "organisieren"},
+"parecer":{"lv": "B1", "en": "to seem", "tr": "gibi görünmek", "de": "scheinen"},
+"participar":{"lv": "B1", "en": "to take part", "tr": "katılmak", "de": "teilnehmen"},
+"permitir":{"lv": "B1", "en": "to allow", "tr": "izin vermek", "de": "erlauben"},
+"pertenecer":{"lv": "B1", "en": "to belong", "tr": "ait olmak", "de": "gehören"},
+"probar":{"lv": "B1", "en": "to try, to taste", "tr": "denemek, tatmak", "de": "probieren", "sc": "ue"},
+"producir":{"lv": "B1", "en": "to produce", "tr": "üretmek", "de": "produzieren"},
+"prohibir":{"lv": "B1", "en": "to forbid", "tr": "yasaklamak", "de": "verbieten", "acc": 1},
+"prometer":{"lv": "B1", "en": "to promise", "tr": "söz vermek", "de": "versprechen"},
+"proponer":{"lv": "B1", "en": "to propose", "tr": "önermek", "de": "vorschlagen", "base": "poner"},
+"proteger":{"lv": "B1", "en": "to protect", "tr": "korumak", "de": "schützen"},
+"quedar":{"lv": "B1", "en": "to meet up, to remain", "tr": "buluşmak, kalmak", "de": "sich verabreden, übrig bleiben"},
+"quitar":{"lv": "B1", "en": "to remove, to take away", "tr": "kaldırmak, çıkarmak", "de": "wegnehmen, entfernen"},
+"reconocer":{"lv": "B1", "en": "to recognise, to admit", "tr": "tanımak, kabul etmek", "de": "erkennen, zugeben", "base": "conocer"},
+"reducir":{"lv": "B1", "en": "to reduce", "tr": "azaltmak", "de": "reduzieren"},
+"reír":{"lv": "B1", "en": "to laugh", "tr": "gülmek", "de": "lachen", "pres": ["río", "ríes", "ríe", "reímos", "reís", "ríen"], "indef": ["reí", "reíste", "rio", "reímos", "reísteis", "rieron"], "subj": ["ría", "rías", "ría", "riamos", "riais", "rían"]},
+"reservar":{"lv": "B1", "en": "to book", "tr": "rezervasyon yapmak", "de": "reservieren"},
+"resolver":{"lv": "B1", "en": "to solve", "tr": "çözmek", "de": "lösen", "sc": "ue", "part": "resuelto"},
+"robar":{"lv": "B1", "en": "to steal", "tr": "çalmak", "de": "stehlen"},
+"romper":{"lv": "B1", "en": "to break", "tr": "kırmak", "de": "(zer)brechen", "part": "roto"},
+"saludar":{"lv": "B1", "en": "to greet", "tr": "selamlamak", "de": "grüßen"},
+"sonar":{"lv": "B1", "en": "to sound, to ring", "tr": "ses çıkarmak, çalmak", "de": "klingen, klingeln", "sc": "ue"},
+"soñar":{"lv": "B1", "en": "to dream", "tr": "rüya görmek, hayal etmek", "de": "träumen", "sc": "ue"},
+"sugerir":{"lv": "B1", "en": "to suggest", "tr": "önermek", "de": "vorschlagen", "sc": "ie-i"},
+"suponer":{"lv": "B1", "en": "to suppose", "tr": "varsaymak", "de": "annehmen, vermuten", "base": "poner"},
+"tardar":{"lv": "B1", "en": "to take (time)", "tr": "(zaman) sürmek, gecikmek", "de": "dauern, brauchen"},
+"tocar":{"lv": "B1", "en": "to touch, to play (an instrument)", "tr": "dokunmak, (enstrüman) çalmak", "de": "berühren, spielen"},
+"traducir":{"lv": "B1", "en": "to translate", "tr": "çevirmek", "de": "übersetzen"},
+"tratar":{"lv": "B1", "en": "to treat, to try", "tr": "davranmak, uğraşmak", "de": "behandeln, versuchen"},
+"valer":{"lv": "B1", "en": "to be worth, to cost", "tr": "değmek, (fiyatı) olmak", "de": "wert sein, kosten", "yo": "valgo", "fst": "valdr"},
+"vestir":{"lv": "B1", "en": "to dress", "tr": "giydirmek", "de": "anziehen", "sc": "i"},
+"abandonar":{"lv": "B2", "en": "to abandon", "tr": "terk etmek, bırakmak", "de": "verlassen, aufgeben"},
+"abrazar":{"lv": "B2", "en": "to hug", "tr": "sarılmak", "de": "umarmen"},
+"aconsejar":{"lv": "B2", "en": "to advise", "tr": "öğüt vermek", "de": "raten"},
+"actuar":{"lv": "B2", "en": "to act", "tr": "harekete geçmek, rol yapmak", "de": "handeln, spielen", "acc": 1},
+"adivinar":{"lv": "B2", "en": "to guess", "tr": "tahmin etmek", "de": "erraten"},
+"admitir":{"lv": "B2", "en": "to admit", "tr": "kabul etmek", "de": "zugeben"},
+"advertir":{"lv": "B2", "en": "to warn", "tr": "uyarmak", "de": "warnen", "sc": "ie-i"},
+"afirmar":{"lv": "B2", "en": "to state, to claim", "tr": "öne sürmek, belirtmek", "de": "behaupten"},
+"agradecer":{"lv": "B2", "en": "to be grateful for", "tr": "minnettar olmak, teşekkür etmek", "de": "danken für"},
+"aguantar":{"lv": "B2", "en": "to put up with", "tr": "dayanmak, katlanmak", "de": "aushalten"},
+"ahorrar":{"lv": "B2", "en": "to save (money)", "tr": "biriktirmek, tasarruf etmek", "de": "sparen"},
+"amenazar":{"lv": "B2", "en": "to threaten", "tr": "tehdit etmek", "de": "drohen"},
+"anunciar":{"lv": "B2", "en": "to announce", "tr": "duyurmak", "de": "ankündigen"},
+"aplaudir":{"lv": "B2", "en": "to applaud", "tr": "alkışlamak", "de": "applaudieren"},
+"aplicar":{"lv": "B2", "en": "to apply", "tr": "uygulamak", "de": "anwenden"},
+"apostar":{"lv": "B2", "en": "to bet", "tr": "bahse girmek", "de": "wetten", "sc": "ue"},
+"apreciar":{"lv": "B2", "en": "to appreciate", "tr": "takdir etmek", "de": "schätzen"},
+"apretar":{"lv": "B2", "en": "to squeeze, to press", "tr": "sıkmak, bastırmak", "de": "drücken", "sc": "ie"},
+"aprobar":{"lv": "B2", "en": "to pass (an exam), to approve", "tr": "(sınavı) geçmek, onaylamak", "de": "bestehen, genehmigen", "sc": "ue"},
+"asistir":{"lv": "B2", "en": "to attend", "tr": "katılmak (etkinliğe)", "de": "teilnehmen an, besuchen"},
+"atraer":{"lv": "B2", "en": "to attract", "tr": "çekmek, cezbetmek", "de": "anziehen", "base": "traer"},
+"atravesar":{"lv": "B2", "en": "to cross, to go through", "tr": "içinden geçmek", "de": "durchqueren", "sc": "ie"},
+"averiguar":{"lv": "B2", "en": "to find out", "tr": "öğrenmek, araştırıp bulmak", "de": "herausfinden"},
+"calcular":{"lv": "B2", "en": "to calculate", "tr": "hesaplamak", "de": "berechnen"},
+"castigar":{"lv": "B2", "en": "to punish", "tr": "cezalandırmak", "de": "bestrafen"},
+"cobrar":{"lv": "B2", "en": "to charge, to get paid", "tr": "ücret almak, para almak", "de": "berechnen, kassieren"},
+"colocar":{"lv": "B2", "en": "to place, to put", "tr": "yerleştirmek", "de": "platzieren, stellen"},
+"comunicar":{"lv": "B2", "en": "to communicate", "tr": "iletmek, bildirmek", "de": "mitteilen"},
+"confesar":{"lv": "B2", "en": "to confess", "tr": "itiraf etmek", "de": "gestehen", "sc": "ie"},
+"confiar":{"lv": "B2", "en": "to trust", "tr": "güvenmek", "de": "vertrauen", "acc": 1},
+"confirmar":{"lv": "B2", "en": "to confirm", "tr": "onaylamak", "de": "bestätigen"},
+"conservar":{"lv": "B2", "en": "to keep, to preserve", "tr": "korumak, saklamak", "de": "bewahren"},
+"consistir":{"lv": "B2", "en": "to consist (of)", "tr": "-den oluşmak", "de": "bestehen (aus)"},
+"consumir":{"lv": "B2", "en": "to consume", "tr": "tüketmek", "de": "verbrauchen"},
+"contener":{"lv": "B2", "en": "to contain", "tr": "içermek", "de": "enthalten", "base": "tener"},
+"contribuir":{"lv": "B2", "en": "to contribute", "tr": "katkıda bulunmak", "de": "beitragen"},
+"convertir":{"lv": "B2", "en": "to turn into", "tr": "dönüştürmek", "de": "verwandeln", "sc": "ie-i"},
+"corregir":{"lv": "B2", "en": "to correct", "tr": "düzeltmek", "de": "korrigieren", "sc": "i"},
+"crear":{"lv": "B2", "en": "to create", "tr": "yaratmak, oluşturmak", "de": "schaffen, erstellen"},
+"criticar":{"lv": "B2", "en": "to criticise", "tr": "eleştirmek", "de": "kritisieren"},
+"culpar":{"lv": "B2", "en": "to blame", "tr": "suçlamak", "de": "beschuldigen"},
+"dedicar":{"lv": "B2", "en": "to dedicate, to devote", "tr": "adamak, ayırmak", "de": "widmen"},
+"deshacer":{"lv": "B2", "en": "to undo, to unpack", "tr": "bozmak, (bavulu) boşaltmak", "de": "rückgängig machen, auspacken", "base": "hacer"},
+"detener":{"lv": "B2", "en": "to stop, to arrest", "tr": "durdurmak, tutuklamak", "de": "anhalten, festnehmen", "base": "tener"},
+"disminuir":{"lv": "B2", "en": "to decrease", "tr": "azalmak, azaltmak", "de": "abnehmen, verringern"},
+"distinguir":{"lv": "B2", "en": "to distinguish", "tr": "ayırt etmek", "de": "unterscheiden"},
+"distribuir":{"lv": "B2", "en": "to distribute", "tr": "dağıtmak", "de": "verteilen"},
+"echar":{"lv": "B2", "en": "to throw, to pour", "tr": "atmak, dökmek", "de": "werfen, gießen"},
+"ejercer":{"lv": "B2", "en": "to practise (a profession)", "tr": "(meslek) icra etmek", "de": "ausüben"},
+"eliminar":{"lv": "B2", "en": "to eliminate", "tr": "ortadan kaldırmak", "de": "beseitigen"},
+"emplear":{"lv": "B2", "en": "to employ, to use", "tr": "istihdam etmek, kullanmak", "de": "anstellen, verwenden"},
+"engañar":{"lv": "B2", "en": "to deceive, to cheat on", "tr": "kandırmak, aldatmak", "de": "täuschen, betrügen"},
+"envejecer":{"lv": "B2", "en": "to grow old", "tr": "yaşlanmak", "de": "altern"},
+"establecer":{"lv": "B2", "en": "to establish", "tr": "kurmak, belirlemek", "de": "festlegen, gründen"},
+"exigir":{"lv": "B2", "en": "to demand", "tr": "talep etmek", "de": "verlangen"},
+"exponer":{"lv": "B2", "en": "to exhibit, to set out", "tr": "sergilemek, ortaya koymak", "de": "ausstellen, darlegen", "base": "poner"},
+"extender":{"lv": "B2", "en": "to spread, to extend", "tr": "yaymak, uzatmak", "de": "ausbreiten, verlängern", "sc": "ie"},
+"fingir":{"lv": "B2", "en": "to pretend", "tr": "numara yapmak", "de": "vortäuschen"},
+"firmar":{"lv": "B2", "en": "to sign", "tr": "imzalamak", "de": "unterschreiben"},
+"fortalecer":{"lv": "B2", "en": "to strengthen", "tr": "güçlendirmek", "de": "stärken"},
+"gobernar":{"lv": "B2", "en": "to govern", "tr": "yönetmek", "de": "regieren", "sc": "ie"},
+"heredar":{"lv": "B2", "en": "to inherit", "tr": "miras almak", "de": "erben"},
+"herir":{"lv": "B2", "en": "to injure, to hurt", "tr": "yaralamak, incitmek", "de": "verletzen", "sc": "ie-i"},
+"hervir":{"lv": "B2", "en": "to boil", "tr": "kaynamak, kaynatmak", "de": "kochen (sieden)", "sc": "ie-i"},
+"influir":{"lv": "B2", "en": "to influence", "tr": "etkilemek", "de": "beeinflussen"},
+"insistir":{"lv": "B2", "en": "to insist", "tr": "ısrar etmek", "de": "bestehen auf"},
+"interpretar":{"lv": "B2", "en": "to interpret, to perform", "tr": "yorumlamak, canlandırmak", "de": "interpretieren, darstellen"},
+"introducir":{"lv": "B2", "en": "to insert, to introduce", "tr": "sokmak, tanıtmak", "de": "einführen"},
+"invertir":{"lv": "B2", "en": "to invest", "tr": "yatırım yapmak", "de": "investieren", "sc": "ie-i"},
+"investigar":{"lv": "B2", "en": "to investigate, to research", "tr": "araştırmak", "de": "untersuchen, forschen"},
+"jurar":{"lv": "B2", "en": "to swear", "tr": "yemin etmek", "de": "schwören"},
+"lanzar":{"lv": "B2", "en": "to throw, to launch", "tr": "fırlatmak, piyasaya sürmek", "de": "werfen, starten"},
+"luchar":{"lv": "B2", "en": "to fight", "tr": "mücadele etmek", "de": "kämpfen"},
+"manejar":{"lv": "B2", "en": "to handle", "tr": "idare etmek, kullanmak", "de": "handhaben"},
+"mejorar":{"lv": "B2", "en": "to improve", "tr": "iyileştirmek, iyileşmek", "de": "verbessern"},
+"mezclar":{"lv": "B2", "en": "to mix", "tr": "karıştırmak", "de": "mischen"},
+"negociar":{"lv": "B2", "en": "to negotiate", "tr": "pazarlık etmek", "de": "verhandeln"},
+"padecer":{"lv": "B2", "en": "to suffer (from)", "tr": "(bir şeyden) muzdarip olmak", "de": "leiden (an)"},
+"perseguir":{"lv": "B2", "en": "to chase, to pursue", "tr": "kovalamak, peşinden koşmak", "de": "verfolgen", "base": "seguir"},
+"prever":{"lv": "B2", "en": "to foresee", "tr": "öngörmek", "de": "vorhersehen", "base": "ver", "pres": ["preveo", "prevés", "prevé", "prevemos", "prevéis", "prevén"], "indef": ["preví", "previste", "previó", "previmos", "previsteis", "previeron"]},
+"rechazar":{"lv": "B2", "en": "to reject", "tr": "reddetmek", "de": "ablehnen"},
+"recomendar":{"lv": "B2", "en": "to recommend", "tr": "tavsiye etmek", "de": "empfehlen", "sc": "ie"},
+"regar":{"lv": "B2", "en": "to water", "tr": "sulamak", "de": "gießen", "sc": "ie"},
+"renunciar":{"lv": "B2", "en": "to give up, to resign", "tr": "vazgeçmek, istifa etmek", "de": "verzichten, kündigen"},
+"requerir":{"lv": "B2", "en": "to require", "tr": "gerektirmek", "de": "erfordern", "sc": "ie-i"},
+"respetar":{"lv": "B2", "en": "to respect", "tr": "saygı göstermek", "de": "respektieren"},
+"revelar":{"lv": "B2", "en": "to reveal", "tr": "açığa çıkarmak", "de": "enthüllen"},
+"rogar":{"lv": "B2", "en": "to beg, to ask", "tr": "yalvarmak, rica etmek", "de": "bitten, anflehen", "sc": "ue"},
+"satisfacer":{"lv": "B2", "en": "to satisfy", "tr": "tatmin etmek", "de": "zufriedenstellen", "base": "hacer", "pre": "satisf", "cut": 1},
+"sobrevivir":{"lv": "B2", "en": "to survive", "tr": "hayatta kalmak", "de": "überleben"},
+"sonreír":{"lv": "B2", "en": "to smile", "tr": "gülümsemek", "de": "lächeln", "pres": ["sonrío", "sonríes", "sonríe", "sonreímos", "sonreís", "sonríen"], "indef": ["sonreí", "sonreíste", "sonrió", "sonreímos", "sonreísteis", "sonrieron"], "subj": ["sonría", "sonrías", "sonría", "sonriamos", "sonriáis", "sonrían"]},
+"soportar":{"lv": "B2", "en": "to put up with", "tr": "katlanmak", "de": "ertragen"},
+"sorprender":{"lv": "B2", "en": "to surprise", "tr": "şaşırtmak", "de": "überraschen"},
+"sustituir":{"lv": "B2", "en": "to replace", "tr": "yerine koymak", "de": "ersetzen"},
+"temer":{"lv": "B2", "en": "to fear", "tr": "korkmak", "de": "fürchten"},
+"torcer":{"lv": "B2", "en": "to twist", "tr": "bükmek, burkmak", "de": "drehen, verdrehen", "sc": "ue"},
+"tropezar":{"lv": "B2", "en": "to trip", "tr": "tökezlemek", "de": "stolpern", "sc": "ie"},
+"vencer":{"lv": "B2", "en": "to defeat, to overcome", "tr": "yenmek", "de": "besiegen"},
+"votar":{"lv": "B2", "en": "to vote", "tr": "oy vermek", "de": "wählen, abstimmen"}
+});
 const TENSES={pres:"Presente",perf:"Pretérito perfecto",indef:"Indefinido",imp:"Imperfecto",fut:"Futuro",cond:"Condicional",subj:"Subjuntivo presente"};
-function conj(inf,tn){
-  const d=V[inf]||{};const typ=inf.slice(-2);const st=inf.slice(0,-2);
+function conj(inf,tn,plain){
+  const d=plain?{}:(V[inf]||{});
   if(Array.isArray(d[tn]))return d[tn];
+  if(d.base){                                   // compound verbs: mantener ← tener, proponer ← poner, satisfacer ← hacer
+    const pre=d.pre!=null?d.pre:inf.slice(0,inf.length-d.base.length),cut=d.cut||0;
+    return conj(d.base,tn).map(f=>f.includes(" ")?f.replace(/ (\S+)$/,(m,x)=>" "+pre+x.slice(cut)):pre+f.slice(cut));
+  }
+  const typ=inf.slice(-2).replace("í","i");const st=inf.slice(0,-2);
+  const sc=d.sc||"";
+  const repLast=(s,a,b)=>{const i=s.lastIndexOf(a);return i<0?s:s.slice(0,i)+b+s.slice(i+a.length);};
+  const ACC={i:"í",u:"ú"};
+  const uy=!plain&&/[^g]uir$/.test(inf);                // construir, huir, incluir… (not seguir)
+  const vowelStem=!plain&&/[aeo]$/.test(st)&&typ!=="ar"; // leer, creer, caer, oír → leyó, creyó, cayó, oyó
+  const zc=!plain&&!d.yo&&/[aeiou]c(er|ir)$/.test(inf)&&!/^(hacer|decir|cocer|mecer)$/.test(inf);
+  const duc=!plain&&/ducir$/.test(inf);
+  const strongStem=()=>{
+    if(sc==="ie"||sc==="ie-i")return repLast(st,"e","ie");
+    if(sc==="i")return repLast(st,"e","i");
+    if(sc==="ue"||sc==="ue-u")return st.lastIndexOf("o")>=0?repLast(st,"o","ue"):repLast(st,"u","ue");
+    if(d.acc){const m=st.match(/[iu](?=[^iu]*$)/);return m?st.slice(0,m.index)+ACC[m[0]]+st.slice(m.index+1):st;}
+    if(uy)return st+"y";
+    return st;
+  };
   const E={
     pres:{ar:["o","as","a","amos","áis","an"],er:["o","es","e","emos","éis","en"],ir:["o","es","e","imos","ís","en"]},
     indef:{ar:["é","aste","ó","amos","asteis","aron"],er:["í","iste","ió","imos","isteis","ieron"],ir:["í","iste","ió","imos","isteis","ieron"]},
     imp:{ar:["aba","abas","aba","ábamos","abais","aban"],er:["ía","ías","ía","íamos","íais","ían"],ir:["ía","ías","ía","íamos","íais","ían"]}
   };
-  if(tn==="pres"||tn==="imp")return E[tn][typ].map(e=>st+e);
-  if(tn==="indef"){
-    const r=E.indef[typ].map(e=>st+e);
-    if(typ==="ar"){
-      if(st.endsWith("c"))r[0]=st.slice(0,-1)+"qué";
-      else if(st.endsWith("g"))r[0]=st+"ué";
-      else if(st.endsWith("z"))r[0]=st.slice(0,-1)+"cé";
+  if(tn==="pres"){
+    const ss=strongStem();
+    const r=E.pres[typ].map((e,p)=>([0,1,2,5].includes(p)?ss:st)+e);
+    if(d.yo)r[0]=d.yo;
+    else if(typ!=="ar"){
+      if(/g(er|ir)$/.test(inf))r[0]=r[0].replace(/go$/,"jo");          // escoger → escojo, elegir → elijo
+      else if(/guir$/.test(inf))r[0]=r[0].replace(/guo$/,"go");        // seguir → sigo
+      else if(/[^aeiou]c(er|ir)$/.test(inf))r[0]=r[0].replace(/co$/,"zo"); // vencer → venzo, torcer → tuerzo
+      else if(zc)r[0]=r[0].replace(/co$/,"zco");                        // conocer → conozco, conducir → conduzco
     }
     return r;
   }
-  if(tn==="fut"){const s=d.fst||inf;return ["é","ás","á","emos","éis","án"].map(e=>s+e);}
-  if(tn==="cond"){const s=d.fst||inf;return ["ía","ías","ía","íamos","íais","ían"].map(e=>s+e);}
-  if(tn==="perf"){const p=d.part||(typ==="ar"?st+"ado":st+"ido");return ["he","has","ha","hemos","habéis","han"].map(h=>h+" "+p);}
-  if(tn==="subj"){
-    const yo=conj(inf,"pres")[0];let s=yo.slice(0,-1);
+  if(tn==="imp")return E.imp[typ].map(e=>st+e);
+  if(tn==="indef"){
+    if(duc){const s=st.slice(0,-1)+"j";return ["e","iste","o","imos","isteis","eron"].map(e=>s+e);}  // conduje, tradujo
+    const r=E.indef[typ].map(e=>st+e);
     if(typ==="ar"){
-      if(s.endsWith("c"))s=s.slice(0,-1)+"qu";else if(s.endsWith("g"))s=s+"u";else if(s.endsWith("z"))s=s.slice(0,-1)+"c";
-      return ["e","es","e","emos","éis","en"].map(e=>s+e);
+      if(st.endsWith("gu"))r[0]=st.slice(0,-1)+"üé";                  // averiguar → averigüé
+      else if(st.endsWith("c"))r[0]=st.slice(0,-1)+"qué";
+      else if(st.endsWith("g"))r[0]=st+"ué";
+      else if(st.endsWith("z"))r[0]=st.slice(0,-1)+"cé";
+      return r;
     }
-    return ["a","as","a","amos","áis","an"].map(e=>s+e);
+    if(vowelStem){r[1]=st+"íste";r[2]=st+"yó";r[3]=st+"ímos";r[4]=st+"ísteis";r[5]=st+"yeron";}
+    else if(uy){r[2]=st+"yó";r[5]=st+"yeron";}
+    if(typ==="ir"&&(sc==="ie-i"||sc==="i")){const s=repLast(st,"e","i");r[2]=s+"ió";r[5]=s+"ieron";}
+    if(typ==="ir"&&sc==="ue-u"){const s=repLast(st,"o","u");r[2]=s+"ió";r[5]=s+"ieron";}
+    return r;
+  }
+  if(tn==="fut"){const s=d.fst||inf.replace("í","i");return ["é","ás","á","emos","éis","án"].map(e=>s+e);}
+  if(tn==="cond"){const s=d.fst||inf.replace("í","i");return ["ía","ías","ía","íamos","íais","ían"].map(e=>s+e);}
+  if(tn==="perf"){const p=d.part||(typ==="ar"?st+"ado":vowelStem?st+"ído":st+"ido");return ["he","has","ha","hemos","habéis","han"].map(h=>h+" "+p);}
+  if(tn==="subj"){
+    const yo=conj(inf,"pres",plain)[0];
+    const orthoAr=s=>s.endsWith("gu")?s.slice(0,-1)+"ü":s.endsWith("c")?s.slice(0,-1)+"qu":s.endsWith("g")?s+"u":s.endsWith("z")?s.slice(0,-1)+"c":s;
+    let strong=yo.replace(/o$/,"");
+    let weak=strong;
+    if(typ==="ar"){strong=orthoAr(strong);weak=(sc||d.acc)?orthoAr(st):strong;}
+    else if(sc==="ie"||sc==="ue")weak=/[^aeiou]c$/.test(st)?st.slice(0,-1)+"z":st;            // volvamos, torzamos
+    else if(sc==="ie-i")weak=repLast(st,"e","i");                                            // sintamos
+    else if(sc==="ue-u")weak=repLast(st,"o","u");                                            // durmamos
+    else if(d.acc)weak=st;                                                                   // prohibamos
+    const en=typ==="ar"?["e","es","e","emos","éis","en"]:["a","as","a","amos","áis","an"];
+    return en.map((e,p)=>(p===3||p===4?weak:strong)+e);
   }
 }
+/* A verb counts as irregular if any tense differs from the regular pattern (spelling-only changes such as busqué, escojo, sigo don't count) */
+const isIrr=inf=>{const d=V[inf]||{};if(d.irr!=null)return !!d.irr;
+  if(d.irrC==null)d.irrC=Object.keys(TENSES).some(tn=>conj(inf,tn).join()!==conj(inf,tn,true).join());return d.irrC;};
 
 /* ================= Header & router ================= */
 let quiz=null, phrState={cat:"all",mode:"list",q:"",deck:null,idx:0,flip:false,dir:"es",pq:null,custom:null}, drillState=null;
@@ -976,13 +1323,16 @@ function renderHeader(){
   const sel=$("#langSel");
   sel.innerHTML=Object.entries(LANGS).map(([k,l])=>`<option value="${k}" ${k===LANG?"selected":""}>${k==="en"?(SEC()?"— "+t("noSecond"):"+ "+t("addLang")):l.flag+" "+l.name}</option>`).join("");
   sel.title=t("langTitle");
+  const fb=$("#fbBtn");fb.title=t("fbNav");fb.setAttribute("aria-label",t("fbNav"));fb.hidden=!fbReady();
   $("#tabs").innerHTML=TABS.map(([k,s,ic])=>`<a href="#${k}" data-t="${k}"><span class="ti">${ic}</span><span class="tlab">${t(s)}</span></a>`).join("");
 }
 $("#langSel").onchange=e=>{LANG=e.target.value;store.settings.lang=LANG;save();renderHeader();route();};
 function route(){
   const h=(location.hash||"#tenses").slice(1);
+  if(h!=="feedback")fbFrom=h;
   let tab=h.startsWith("l-")?"tenses":h.startsWith("practice")?"practice":(h.startsWith("r-")||h.startsWith("c-"))?"reading":h.startsWith("w-")?"words":h;
-  if(!TABS.some(x=>x[0]===tab))tab="tenses";
+  if(h==="feedback")tab="feedback";else if(!TABS.some(x=>x[0]===tab))tab="tenses";
+  $("#fbBtn").classList.toggle("on",tab==="feedback");
   document.querySelectorAll("#tabs a").forEach(a=>a.classList.toggle("on",a.dataset.t===tab));
   if(canSpeak)try{speechSynthesis.cancel();}catch(e){}
   closeSheet();
@@ -994,7 +1344,7 @@ function route(){
   if(h.startsWith("c-")){const S=findClassic(h);if(S){renderStory(S);return;}}
   if(!h.startsWith("w-"))wordEdit=false;
   if(h.startsWith("w-")){const W=findWord(h.slice(2));if(W){renderWord(W);return;}}
-  ({tenses:renderTenses,phrases:renderPhrases,reading:renderReading,words:renderWords,drill:renderDrill,progress:renderProgress})[tab]();
+  ({tenses:renderTenses,phrases:renderPhrases,reading:renderReading,words:renderWords,drill:renderDrill,progress:renderProgress,feedback:renderFeedback})[tab]();
 }
 window.addEventListener("hashchange",route);
 window.addEventListener("hashchange",()=>{try{statsView();}catch(e){}});
@@ -1187,10 +1537,13 @@ function drawPTest(){
 }
 
 /* ================= Drill ================= */
-function drillCfg(){if(!store.drillCfg)store.drillCfg={tenses:["pres","indef","imp"],set:"all"};return store.drillCfg;}
-function newDrill(){
+const DLV=["A1","A2","B1","B2"];
+function drillCfg(){if(!store.drillCfg)store.drillCfg={tenses:["pres","indef","imp"],set:"all"};if(!DLV.includes(store.drillCfg.lv))store.drillCfg.lv="A2";return store.drillCfg;}
+const verbsUpTo=lv=>Object.keys(V).filter(v=>DLV.indexOf(V[v].lv)<=DLV.indexOf(lv));
+function newDrill(force){
   const c=drillCfg();
-  const verbs=Object.keys(V).filter(v=>c.set==="all"||(c.set==="irr"?V[v].irr:!V[v].irr));
+  let verbs=verbsUpTo(c.lv).filter(v=>c.set==="all"||(c.set==="irr"?isIrr(v):!isIrr(v)));
+  if(force)verbs=[force];
   const errs=store.drill.verbErr||{};
   const w=verbs.flatMap(v=>Array(1+Math.min(3,errs[v]||0)).fill(v));
   const verb=w[Math.floor(Math.random()*w.length)];
@@ -1203,10 +1556,18 @@ function renderDrill(){
   if(!drillState)newDrill();
   const d=store.drill;const acc=d.total?Math.round(d.correct/d.total*100):0;
   const s=drillState;const v=V[s.verb];
-  $("#app").innerHTML=`<section class="hero"><h1>${t("drillTitle")}</h1><p>${t("drillDesc",Object.keys(V).length,Object.keys(TENSES).length)}</p></section>
+  const pool=verbsUpTo(c.lv);
+  const vrow=x=>`<button class="vrow" data-v="${x}"><b>${x}</b>${isIrr(x)?`<i class="irrdot" title="${t("irregular")}">•</i>`:""} <span>${esc(prim(V[x]))}</span></button>`;
+  $("#app").innerHTML=`<section class="hero"><h1>${t("drillTitle")}</h1><p>${t("drillDesc",pool.length,Object.keys(TENSES).length)}</p></section>
+  <div class="card lvcard"><div class="lab">${t("drillLevel")}</div>
+    <div class="seg lvseg">${DLV.map(l=>`<button class="${c.lv===l?"on":""}" data-lv="${l}"><b>${l}</b><small>${t("nVerbs",verbsUpTo(l).length)}</small></button>`).join("")}</div>
+    <p class="muted lvnote">${t("drillLvNote",pool.length,pool.filter(isIrr).length)}</p>
+    <details class="vlist" id="vlist"><summary>${t("drillList")} (${pool.length})</summary><p class="muted lvnote">${t("drillListHint")}</p>
+      ${DLV.slice(0,DLV.indexOf(c.lv)+1).map(l=>{const g=pool.filter(x=>V[x].lv===l).sort((a,b)=>a.localeCompare(b,"es"));return `<div class="vgrp"><div class="vgh">${l} · ${t("nVerbs",g.length)}</div><div class="vgrid">${g.map(vrow).join("")}</div></div>`;}).join("")}
+    </details></div>
   <div class="stats"><div class="card stat"><div class="n">${d.streak}</div><div class="l">${t("streak")}</div></div><div class="card stat"><div class="n">${d.best}</div><div class="l">${t("bestStreak")}</div></div><div class="card stat"><div class="n">${pct(acc)}</div><div class="l">${t("accuracy")}</div></div><div class="card stat"><div class="n">${d.total}</div><div class="l">${t("totalQ")}</div></div></div>
   <div class="card drill" id="dcard">
-    <div class="verb">${s.verb} ${spk(s.verb)}</div><div class="mean">${transInline(v)}${v.irr?` · <b style="color:var(--accent)">${t("irregular")}</b>`:""}</div>
+    <div class="verb">${s.verb} ${spk(s.verb)}</div><div class="mean">${transInline(v)}${isIrr(s.verb)?` · <b style="color:var(--accent)">${t("irregular")}</b>`:""}</div>
     <div class="tags"><span class="pill lvl">${TENSES[s.tense]}</span><span class="pill">${PERS[s.p]}</span></div>
     <div class="inrow"><input class="tin" id="din" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${s.tense==="perf"?t("egPerf"):t("typeConj")}"><button class="btn dark" id="dchk">${t("check")}</button></div>
     <div class="keys">${["á","é","í","ó","ú","ñ","ü"].map(ch=>`<button data-ch="${ch}">${ch}</button>`).join("")}</div>
@@ -1225,6 +1586,8 @@ function renderDrill(){
   $("#dskip").onclick=()=>drillReveal(false,"");
   document.querySelectorAll("[data-tn]").forEach(b=>b.onclick=()=>{const k=b.dataset.tn;const i=c.tenses.indexOf(k);if(i>=0){if(c.tenses.length>1)c.tenses.splice(i,1);}else c.tenses.push(k);save();newDrill();renderDrill();});
   document.querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{c.set=b.dataset.vs;save();newDrill();renderDrill();});
+  document.querySelectorAll("[data-lv]").forEach(b=>b.onclick=()=>{c.lv=b.dataset.lv;save();newDrill();renderDrill();});
+  document.querySelectorAll(".vrow").forEach(b=>b.onclick=()=>{newDrill(b.dataset.v);renderDrill();const el=$("#dcard");if(el)el.scrollIntoView({behavior:"smooth",block:"center"});});
   $("#strict").onchange=e=>{store.settings.strict=e.target.checked;save();};
 }
 function drillCheck(){
@@ -1301,7 +1664,7 @@ function genFill(tenses,n){
     const q=`${m[0]} ${SUBJ[p]} ___ ${comp}.`;if(seen.has(q))continue;seen.add(q);
     const base=`<b>${v}</b> · ${TENSES[tn]} · ${PERS[p]} → <b>${ans}</b>`;
     out.push(Object.assign({q,h:`${v} · ${TENSES[tn]}`,a:[ans],
-      ex:perLang(k=>`${base}${V[v].irr?" ("+((T[k]||T.en).irregularVerb)+")":""}. ${inLang(WHY[tn],k)}`)},gloss(m,v)));
+      ex:perLang(k=>`${base}${isIrr(v)?" ("+((T[k]||T.en).irregularVerb)+")":""}. ${inLang(WHY[tn],k)}`)},gloss(m,v)));
   }
   return out;
 }
@@ -1646,7 +2009,8 @@ phrTitle:"Alltagsausdrücke",phrDesc:"Nützliche Wendungen für den Alltag in Sp
 all:"✨ Alle",list:"Liste",cards:"Karten",test:"Test",search:"Suchen…",noResults:"Keine Ergebnisse.",cardHint:"Tippe auf die Karte, um sie umzudrehen",again:"↻ Nochmal zeigen",knew:"✓ Gewusst",
 deckDone:"Du hast den Stapel geschafft. Beim ersten Mal gewusst: <b>{0}</b>",reshuffle:"Neu mischen",whatMeans:"Was bedeutet das?",whichSpanish:"Was ist die spanische Version?",
 phrMore:"Übe noch ein bisschen mit den Karten und versuch es dann noch einmal.",newTest:"Neuer Test",
-drillTitle:"Konjugationstraining",drillDesc:"{0} Verben und {1} Zeiten. Du bekommst ein zufälliges Verb, eine Person und eine Zeit und gibst die Form ein. Verben, bei denen du Fehler gemacht hast, kommen öfter dran.",
+drillTitle:"Konjugationstraining",drillLevel:"NIVEAU",nVerbs:"{0} Verben",drillLvNote:"{0} Verben auf diesem Niveau, davon {1} unregelmäßig. Jedes Niveau enthält auch die vorherigen.",drillList:"📋 Verbliste",drillListHint:"Tippe auf ein Verb, um es als Nächstes zu üben. • = unregelmäßig",
+drillDesc:"{0} Verben und {1} Zeiten. Du bekommst ein zufälliges Verb, eine Person und eine Zeit und gibst die Form ein. Verben, bei denen du Fehler gemacht hast, kommen öfter dran.",
 streak:"Serie 🔥",bestStreak:"Beste Serie",accuracy:"Trefferquote",totalQ:"Fragen",irregular:"unregelmäßig",irregularVerb:"unregelmäßiges Verb",egPerf:"z. B. he hablado",typeConj:"Form eingeben…",
 dontKnow:"Weiß ich nicht, zeig es mir",tensesCap:"ZEITEN",verbsCap:"VERBEN",allV:"Alle",regV:"Regelmäßig",irrV:"Unregelmäßig",
 strict:"Akzente sind Pflicht (á, é, í…). Wenn aus, zählen Antworten ohne Akzent als richtig, mit einem Hinweis.",okAccentX:"Richtig, aber achte auf den Akzent: {0}",
@@ -3709,6 +4073,7 @@ function routeName(h){
   if(h.startsWith("r-"))return "/story/"+(STORIES.some(x=>x.id===h.slice(2))?h.slice(2):"mine");
   if(h.startsWith("w-"))return "/words/detail";
   if(h.startsWith("practice"))return "/practice"+(h.length>9?"/"+h.slice(9):"");
+  if(h==="feedback")return "/feedback";
   return TABS.some(x=>x[0]===h)?"/"+h:"/other";
 }
 const localDay=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -3748,6 +4113,7 @@ function renderProgress(){
   <div class="sec"><h2>${t("weakVerbs")}</h2>${weak.length?`<div class="chips">${weak.map(([v,n])=>`<span class="chip">${t("nMistakes",v,n)}</span>`).join("")}</div><p class="muted">${t("weakNote")}</p>`:`<p class="muted">${t("noData")}</p>`}</div>
   <div class="sec"><h2>${t("voiceTitle")}</h2><div class="card vbox" id="vbox"></div></div>
   <div class="sec"><h2>${t("statsTitle")}</h2><div class="card vbox" id="sbox"></div></div>
+  ${fbReady()?`<div class="sec"><h2>${t("fbTitle")}</h2><div class="card vbox"><p class="muted" style="margin:0 0 12px;font-size:14px">${t("fbProgDesc")}</p><a class="btn" href="#feedback">${t("fbOpen")}</a></div></div>`:""}
   <button class="btn ghost" id="reset">${t("reset")}</button>`;
   renderVoiceBox();renderStatsBox();
   $("#reset").onclick=()=>{
@@ -3757,9 +4123,95 @@ function renderProgress(){
   };
 }
 
+/* ================= Suggestions & feedback (Web3Forms: no account, no email from the user) ================= */
+const FB_KEY="__FB_KEY__";            // Web3Forms access key. Public by design: it can only deliver mail to the owner's inbox.
+const FB_URL="https://api.web3forms.com/submit";
+const fbReady=()=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(FB_KEY);
+const FB_TYPES={idea:"💡 Öneri",bug:"🐞 Hata",other:"💬 Diğer"};   // labels in the email (always Turkish: the email goes to the developer)
+let fbType="idea",fbFrom="",fbBusy=false;
+Object.assign(T.en,{fbNav:"Send a suggestion",fbTitle:"💡 Suggestions & feedback",fbDesc:"Got an idea, spotted a mistake, or missing something? Write it here and it goes straight to the person who makes the app. No email or name needed.",fbType:"What is it about?",fb_idea:"💡 Idea",fb_bug:"🐞 Mistake",fb_other:"💬 Other",fbPh:"Write your message… (in any language)",fbMeta:"Include technical info (helps track down mistakes)",fbInfoLbl:"Sent along:",fbSend:"Send",fbSending:"Sending…",fbThanks:"Thanks! Your message has been sent. 🙌",fbAnother:"Write another message",fbQueued:"You're offline right now. Your message is saved and will be sent automatically when you're back online.",fbErr:"Your message couldn't be sent right now. It's saved and will be retried automatically.",fbFail:"Your message couldn't be sent. Your text is still here, so try again in a moment.",fbTooShort:"Please write a little more, at least a few words.",fbLimit:"You've sent several messages in a short time. Please try again a bit later.",fbPrivacy:"Messages are delivered by email through Web3Forms. Don't include personal details you wouldn't want to share.",fbPending:"Messages waiting to be sent: {0}",fbProgDesc:"Have an idea for the app or spotted a mistake? Write directly to the developer.",fbOpen:"✍️ Write a suggestion",fbNotSet:"The suggestion box isn't connected yet.",fbPage:"page",fbApp:"installed app",fbBrowser:"browser"});
+Object.assign(T.tr,{fbNav:"Öneri gönder",fbTitle:"💡 Öneri ve geri bildirim",fbDesc:"Bir fikrin mi var, bir hata mı gördün, ya da bir şey mi eksik? Buraya yaz, mesajın doğrudan uygulamayı yapan kişiye ulaşsın. E-posta ya da isim gerekmiyor.",fbType:"Ne hakkında?",fb_idea:"💡 Öneri",fb_bug:"🐞 Hata",fb_other:"💬 Diğer",fbPh:"Mesajını yaz… (istediğin dilde)",fbMeta:"Teknik bilgileri de ekle (hataları bulmaya yardımcı olur)",fbInfoLbl:"Birlikte gönderilecek:",fbSend:"Gönder",fbSending:"Gönderiliyor…",fbThanks:"Teşekkürler! Mesajın iletildi. 🙌",fbAnother:"Yeni mesaj yaz",fbQueued:"Şu an internet yok. Mesajın kaydedildi, bağlantı gelince otomatik gönderilecek.",fbErr:"Mesajın şu an gönderilemedi. Kaydedildi, daha sonra otomatik olarak tekrar denenecek.",fbFail:"Mesajın gönderilemedi. Yazdığın metin duruyor, biraz sonra tekrar dene.",fbTooShort:"Biraz daha yaz, en az birkaç kelime.",fbLimit:"Kısa sürede birkaç mesaj gönderdin. Biraz sonra tekrar dene.",fbPrivacy:"Mesajlar Web3Forms aracılığıyla e-postayla iletilir. Paylaşmak istemediğin kişisel bilgileri yazma.",fbPending:"Gönderilmeyi bekleyen mesaj: {0}",fbProgDesc:"Uygulama için bir fikrin mi var ya da bir hata mı gördün? Doğrudan geliştiriciye yaz.",fbOpen:"✍️ Öneri yaz",fbNotSet:"Öneri kutusu henüz bağlanmadı.",fbPage:"sayfa",fbApp:"yüklü uygulama",fbBrowser:"tarayıcı"});
+Object.assign(T.de,{fbNav:"Vorschlag senden",fbTitle:"💡 Vorschläge und Feedback",fbDesc:"Hast du eine Idee, einen Fehler entdeckt oder fehlt dir etwas? Schreib es hier, und die Nachricht geht direkt an den Entwickler der App. Keine E-Mail und kein Name nötig.",fbType:"Worum geht es?",fb_idea:"💡 Idee",fb_bug:"🐞 Fehler",fb_other:"💬 Sonstiges",fbPh:"Schreib deine Nachricht … (in jeder Sprache)",fbMeta:"Technische Infos mitsenden (hilft, Fehler zu finden)",fbInfoLbl:"Wird mitgesendet:",fbSend:"Senden",fbSending:"Wird gesendet …",fbThanks:"Danke! Deine Nachricht wurde gesendet. 🙌",fbAnother:"Neue Nachricht schreiben",fbQueued:"Du bist gerade offline. Deine Nachricht ist gespeichert und wird automatisch gesendet, sobald du wieder online bist.",fbErr:"Die Nachricht konnte gerade nicht gesendet werden. Sie ist gespeichert und wird später automatisch erneut gesendet.",fbFail:"Die Nachricht konnte nicht gesendet werden. Dein Text bleibt erhalten, versuch es gleich noch einmal.",fbTooShort:"Schreib bitte etwas mehr, wenigstens ein paar Wörter.",fbLimit:"Du hast in kurzer Zeit mehrere Nachrichten gesendet. Versuch es bitte etwas später.",fbPrivacy:"Nachrichten werden über Web3Forms per E-Mail zugestellt. Schreib keine persönlichen Daten, die du nicht teilen möchtest.",fbPending:"Nachrichten, die noch gesendet werden: {0}",fbProgDesc:"Hast du eine Idee für die App oder einen Fehler gefunden? Schreib direkt an den Entwickler.",fbOpen:"✍️ Vorschlag schreiben",fbNotSet:"Der Vorschlagskasten ist noch nicht verbunden.",fbPage:"Seite",fbApp:"installierte App",fbBrowser:"Browser"});
+
+function fbInfo(){
+  const ua=navigator.userAgent||"";
+  const os=isIOS()?"iOS":/Android/i.test(ua)?"Android":/Mac/i.test(ua)?"Mac":/Win/i.test(ua)?"Windows":/Linux/i.test(ua)?"Linux":"?";
+  const app=navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+  return {build:window.APP_BUILD||"dev",lang:LANG,os,app,page:fbFrom?"#"+fbFrom:"-"};
+}
+const fbInfoText=i=>`${i.build} · ${i.lang} · ${i.os} · ${t(i.app?"fbApp":"fbBrowser")}`+(i.page!=="-"?` · ${t("fbPage")}: ${i.page}`:"");
+async function fbPost(m){
+  const head=m.text.replace(/\s+/g," ").slice(0,60)+(m.text.length>60?"…":"");
+  const body={access_key:FB_KEY,subject:`Español Lab · ${FB_TYPES[m.type]||m.type} · ${head}`,from_name:"Español Lab",botcheck:false,
+    "Tür":FB_TYPES[m.type]||m.type,"Mesaj":m.text,"Yazıldığı zaman":m.at};
+  if(m.info)Object.assign(body,{"Sürüm":m.info.build,"Arayüz dili":m.info.lang,"Cihaz":m.info.os+" · "+(m.info.app?"yüklü uygulama":"tarayıcı"),"Sayfa":m.info.page});
+  const r=await fetch(FB_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});
+  let j={};try{j=await r.json();}catch(e){}
+  if(!r.ok||!j.success){const e=new Error(j.message||("HTTP "+r.status));e.status=r.status;throw e;}
+}
+const fbRecent=()=>{const now=Date.now();store.fbSent=(store.fbSent||[]).filter(x=>now-x<3600e3);return store.fbSent;};
+function fbQueue(m){(store.fbOutbox||(store.fbOutbox=[])).push(m);save();}
+async function fbFlush(){
+  if(fbBusy||!fbReady()||!navigator.onLine||!(store.fbOutbox||[]).length)return;
+  fbBusy=true;
+  try{
+    while(store.fbOutbox.length){
+      const m=store.fbOutbox[0];
+      try{await fbPost(m);store.fbOutbox.shift();fbRecent().push(Date.now());save();}
+      catch(e){
+        m.tries=(m.tries||0)+1;
+        if(e.status>=400&&e.status<500&&e.status!==429||m.tries>=8)store.fbOutbox.shift();   // rejected for good: drop it
+        save();if(!(e.status>=400&&e.status<500&&e.status!==429))break;                       // network/server trouble: try later
+      }
+    }
+  }finally{fbBusy=false;}
+  if(location.hash==="#feedback")fbPendingNote();
+}
+function fbPendingNote(){const el=$("#fbPend");if(!el)return;const n=(store.fbOutbox||[]).length;el.textContent=n?t("fbPending",n):"";}
+function renderFeedback(){
+  const meta=!store.settings.fbNoMeta;
+  $("#app").innerHTML=`<section class="hero"><h1>${t("fbTitle")}</h1><p>${t("fbDesc")}</p></section>
+  <div class="card fbcard">
+    ${fbReady()?"":`<p class="fbwarn">${t("fbNotSet")}</p>`}
+    <div class="fblab">${t("fbType")}</div>
+    <div class="chips fbtypes">${Object.keys(FB_TYPES).map(k=>`<button class="chip ${fbType===k?"on":""}" data-k="${k}" type="button">${t("fb_"+k)}</button>`).join("")}</div>
+    <textarea id="fbText" class="note" maxlength="3000" placeholder="${esc(t("fbPh"))}">${esc(store.fbDraft||"")}</textarea>
+    <label class="fbmeta"><input type="checkbox" id="fbMeta" ${meta?"checked":""}> <span>${t("fbMeta")}</span></label>
+    <div class="muted fbinfo" id="fbInfo" ${meta?"":"hidden"}>${t("fbInfoLbl")} ${esc(fbInfoText(fbInfo()))}</div>
+    <div class="btns"><button class="btn" id="fbSend" type="button" ${fbReady()?"":"disabled"}>${t("fbSend")}</button></div>
+    <div id="fbRes" role="status" aria-live="polite"></div>
+    <p class="muted fbpriv">${t("fbPrivacy")}</p>
+    <p class="muted fbpriv" id="fbPend"></p>
+  </div>`;
+  fbPendingNote();
+  document.querySelectorAll(".fbtypes .chip").forEach(b=>b.onclick=()=>{fbType=b.dataset.k;document.querySelectorAll(".fbtypes .chip").forEach(x=>x.classList.toggle("on",x===b));});
+  const ta=$("#fbText");
+  ta.oninput=()=>{store.fbDraft=ta.value;save();$("#fbRes").innerHTML="";};
+  $("#fbMeta").onchange=e=>{store.settings.fbNoMeta=!e.target.checked;save();$("#fbInfo").hidden=!e.target.checked;};
+  const res=(cls,msg,again)=>{$("#fbRes").innerHTML=`<div class="fbres ${cls}">${msg}${again?` <button class="btn ghost" id="fbAgain" type="button">${t("fbAnother")}</button>`:""}</div>`;
+    if(again)$("#fbAgain").onclick=()=>{$("#fbRes").innerHTML="";ta.focus();};};
+  const done=()=>{ta.value="";store.fbDraft="";save();};
+  $("#fbSend").onclick=async()=>{
+    const text=ta.value.trim();
+    if(text.replace(/\s+/g,"").length<5){res("bad",t("fbTooShort"));ta.focus();return;}
+    if(fbRecent().length>=5){res("bad",t("fbLimit"));return;}
+    const m={type:fbType,text,info:$("#fbMeta").checked?fbInfo():null,at:new Date().toLocaleString("sv-SE",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",timeZoneName:"short"})};
+    if(!navigator.onLine){fbQueue(m);done();res("wait",t("fbQueued"));fbPendingNote();return;}
+    const btn=$("#fbSend");btn.disabled=true;btn.textContent=t("fbSending");
+    try{await fbPost(m);fbRecent().push(Date.now());save();done();res("ok",t("fbThanks"),true);gc("/feedback/sent",true);}
+    catch(e){
+      if(e.status>=400&&e.status<500&&e.status!==429)res("bad",t("fbFail"));
+      else{fbQueue(m);done();res("wait",t("fbErr"));}
+    }
+    finally{if($("#fbSend")){btn.disabled=false;btn.textContent=t("fbSend");}fbPendingNote();}
+  };
+}
+window.addEventListener("online",()=>{fbFlush();});
+
 renderHeader();
 route();
 try{loadGC();statsView();statsDaily();}catch(e){}
+setTimeout(()=>{try{fbFlush();}catch(e){}},1500);
 </script>
 <div id="installHint" hidden></div>
 <script>
