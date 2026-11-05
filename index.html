@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Español Lab</title>
-<script>window.APP_BUILD="202611051227";</script>
+<script>window.APP_BUILD="202611051244";</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="favicon-32.png">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -272,7 +272,11 @@ table.conj b{color:var(--accent)}
 .shead{display:flex;align-items:flex-start;gap:10px}
 .shead .x{margin-left:auto;border:none;background:none;font-size:18px;color:var(--muted);padding:2px 6px}
 .sword{font-family:Fraunces,serif;font-size:24px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.sprev{font-weight:600;min-height:1em}
+.sprev{min-height:1em}
+.sprev .smean{font-weight:600;line-height:1.4}
+.sprev .sgram{color:var(--muted);font-size:13.5px;margin-top:3px}
+.sprev .salt{color:var(--muted);font-size:13px;margin-top:8px;font-weight:600}
+.sprev .smean+.smean{margin-top:6px}
 .sctx{color:var(--muted);font-size:14px;font-style:italic}
 .btn.sm{padding:8px 12px;font-size:14px}
 .sheet .btns{align-items:center}
@@ -1314,6 +1318,73 @@ function conj(inf,tn,plain){
 /* A verb counts as irregular if any tense differs from the regular pattern (spelling-only changes such as busqué, escojo, sigo don't count) */
 const isIrr=inf=>{const d=V[inf]||{};if(d.irr!=null)return !!d.irr;
   if(d.irrC==null)d.irrC=Object.keys(TENSES).some(tn=>conj(inf,tn).join()!==conj(inf,tn,true).join());return d.irrC;};
+/* ===== Word → verb lookup (offline): which verb, tense and person a form belongs to ===== */
+/* Common words that are also verb forms but usually mean something else (como = like, nada = nothing, la cuenta = the bill…) */
+const AMBIG=new Set("como bajo entre sobre vino río cocina cuento camino trabajo estudio viaje vuelo regalo pago cambio juego sueño baile canto paseo llamada cena ayuda compra salida entrada comida bebida cuenta prueba lucha pregunta espera visita corte entrega carga vale venga oye nada nota cubierto hecho dicho puesto querido conocido parecido parece vista vuelta muerto abierto".split(" "));
+const GER={poder:"pudiendo",decir:"diciendo",venir:"viniendo",ir:"yendo",pedir:"pidiendo",dormir:"durmiendo","reír":"riendo","sonreír":"sonriendo","oír":"oyendo",traer:"trayendo",ver:"viendo",ser:"siendo"};
+function gerund(v){
+  const d=V[v]||{};
+  if(GER[v])return GER[v];
+  if(d.base){const g=gerund(d.base);if(g){const pre=d.pre!=null?d.pre:v.slice(0,v.length-d.base.length);return pre+g.slice(d.cut||0);}}
+  const typ=v.slice(-2).replace("í","i"),st=v.slice(0,-2);
+  if(typ==="ar")return st+"ando";
+  if(/[aeo]$/.test(st)||/[^g]uir$/.test(v))return st+"yendo";
+  let s=st;
+  if(typ==="ir"&&(d.sc==="ie-i"||d.sc==="i"))s=s.replace(/e(?=[^e]*$)/,"i");
+  if(typ==="ir"&&d.sc==="ue-u")s=s.replace(/o(?=[^o]*$)/,"u");
+  return s+"iendo";
+}
+/* Words the sheet should recognise but that are not drilled */
+const XV={haber:{en:"to have (auxiliary: ha dicho = has said); hay = there is / there are",tr:"yardımcı fiil (ha dicho = söyledi); hay = var",de:"haben (Hilfsverb: ha dicho = hat gesagt); hay = es gibt",
+  f:{pres:["he","has","ha","hemos","habéis","han"],imp:["había","habías","había","habíamos","habíais","habían"],indef:["hube","hubiste","hubo","hubimos","hubisteis","hubieron"],
+     fut:["habré","habrás","habrá","habremos","habréis","habrán"],cond:["habría","habrías","habría","habríamos","habríais","habrían"],subj:["haya","hayas","haya","hayamos","hayáis","hayan"]},part:"habido",ger:"habiendo"}};
+const VM=v=>V[v]||XV[v];
+let VFX=null;
+function verbIndex(){
+  if(VFX)return VFX;VFX=new Map();
+  const add=(f,o)=>{f=f.toLowerCase();if(!VFX.has(f))VFX.set(f,[]);const a=VFX.get(f);if(!a.some(x=>x.v===o.v&&x.k===o.k&&x.tn===o.tn&&x.p===o.p))a.push(o);};
+  for(const v of Object.keys(V)){
+    add(v,{v,k:"inf"});
+    for(const tn of Object.keys(TENSES))conj(v,tn).forEach((f,p)=>add(f,{v,k:"conj",tn,p}));
+    const part=conj(v,"perf")[0].split(" ")[1];
+    (part.endsWith("o")?[part,part.slice(0,-1)+"a",part+"s",part.slice(0,-1)+"as"]:[part]).forEach(f=>add(f,{v,k:"part"}));
+    add(gerund(v),{v,k:"ger"});
+  }
+  for(const [v,x] of Object.entries(XV)){
+    add(v,{v,k:"inf"});Object.entries(x.f).forEach(([tn,fs])=>fs.forEach((f,p)=>add(f,{v,k:"conj",tn,p})));
+    add(x.part,{v,k:"part"});add(x.ger,{v,k:"ger"});
+  }
+  add("hay",{v:"haber",k:"hay"});
+  return VFX;
+}
+/* [{v, gram}] — one entry per verb, grammar text in the UI language */
+function verbHits(word){
+  const hits=verbIndex().get(String(word).trim().toLowerCase().replace(/\s+/g," "));if(!hits)return [];
+  const by=new Map();hits.forEach(h=>{if(!by.has(h.v))by.set(h.v,[]);by.get(h.v).push(h);});
+  return [...by.entries()].slice(0,3).map(([v,hs])=>{
+    const parts=[];
+    if(hs.some(h=>h.k==="inf"))parts.push(t("gInf"));
+    if(hs.some(h=>h.k==="hay"))parts.push(t("gHay"));
+    const tens=new Map();hs.filter(h=>h.k==="conj").forEach(h=>{if(!tens.has(h.tn))tens.set(h.tn,[]);tens.get(h.tn).push(PERS[h.p]);});
+    tens.forEach((ps,tn)=>parts.push(`${TENSES[tn]}: ${ps.join(", ")}`));
+    if(hs.some(h=>h.k==="part"))parts.push(t("gPart"));
+    if(hs.some(h=>h.k==="ger"))parts.push(t("gGer"));
+    return {v,gram:parts.join(" · "),gramEs:hs.filter(h=>h.k==="conj").map(h=>`${TENSES[h.tn]} · ${PERS[h.p]}`).join("; ")};
+  });
+}
+function verbPreviewHTML(word){
+  const hs=verbHits(word);if(!hs.length)return "";
+  const self=hs.length===1&&hs[0].v===String(word).trim().toLowerCase();
+  return hs.map(h=>`<div class="smean"><b>${esc(h.v)}</b> — ${transInline(VM(h.v))}</div>${self&&!h.gram.includes(":")?"":`<div class="sgram">${esc(t("formOf",h.v))} · ${esc(h.gram)}</div>`}`).join("");
+}
+function localVerbWord(word){
+  const k=String(word).trim().toLowerCase().replace(/\s+/g," ");if(AMBIG.has(k))return null;
+  const hs=verbHits(k);if(hs.length!==1)return null;
+  const v=hs[0].v,m={};
+  Object.keys(LANGS).forEach(l=>{const x=l==="en"?VM(v).en:lookup(VM(v),l);if(x)m[l]=[x];});
+  return {es:v,typed:String(word).trim(),pos:"verb",gender:"",m,usage:{},forms:k===v?"":`${k}: ${hs[0].gramEs||hs[0].gram}`,ex:[],src:"local"};
+}
+
 
 /* ================= Header & router ================= */
 let quiz=null, phrState={cat:"all",mode:"list",q:"",deck:null,idx:0,flip:false,dir:"es",pq:null,custom:null}, drillState=null;
@@ -2204,7 +2275,8 @@ async function createWord(raw,extra={}){
   const word=raw.trim().replace(/\s+/g," ");if(!word)return {status:"empty"};
   const dup=wordsList().find(w=>wkey(w.es)===wkey(word)||wkey(w.typed||"")===wkey(word));
   if(dup)return {w:dup,dup:true};
-  const {w,status}=await lookupWord(word);
+  const loc=localVerbWord(word);
+  const {w,status}=loc?{w:loc,status:"ok"}:await lookupWord(word);
   if(w){const d2=wordsList().find(x=>wkey(x.es)===wkey(w.es));if(d2)return {w:d2,dup:true};}
   const nw=w?Object.assign({id:"w"+Date.now().toString(36),added:Date.now(),note:"",st:newStats()},w)
     :{id:"w"+Date.now().toString(36),es:word,typed:word,pos:"",gender:"",m:{},usage:{},forms:"",ex:[],src:"manual",pending:true,added:Date.now(),note:"",st:newStats()};
@@ -2465,7 +2537,7 @@ function renderSheet(){
   const have=wordsList().find(w=>wkey(w.es)===k||wkey(w.typed||"")===k);
   sh.innerHTML=`<div class="sheet card" role="dialog">
     <div class="shead"><div class="sword">${esc(phrase)} ${spk(phrase)}</div><button class="x" id="sX" aria-label="close">✕</button></div>
-    <div class="sprev" id="sPrev">${have?esc(wPrim(have)):""}</div>
+    <div class="sprev" id="sPrev">${have?(verbPreviewHTML(phrase)||esc(wPrim(have))):""}</div>
     <div class="sctx">“${esc(selSentence())}”</div>
     <div class="btns"><button class="btn ghost sm" id="sL">${t("extL")}</button><button class="btn ghost sm" id="sR">${t("extR")}</button></div>
     <div class="btns" id="sAct">${have?`<span class="pill ok">${t("inList")}</span><a class="btn ghost sm" href="#w-${have.id}">${t("openWord")}</a>`:`<button class="btn" id="sAdd">${t("addToWords")}</button>`}</div>
@@ -2484,20 +2556,35 @@ function renderSheet(){
     st2.className="status";
     const link=r.w?` · <a href="#w-${r.w.id}">${t("openWord")}</a>`:"";
     st2.innerHTML=(r.dup?t("inList"):r.status==="ok"?esc(t("addedWord",r.w.es+" — "+wPrim(r.w))):esc(t("addedNoMeaning")))+link;
-    if(r.w&&wPrim(r.w))$("#sPrev").textContent=wPrim(r.w);
+    if(r.w&&wPrim(r.w)&&!r.w.forms)$("#sPrev").textContent=wPrim(r.w);
     refreshSavedMarks();
   };
   if(!have)quickPreview(phrase);
 }
 async function quickPreview(phrase){
   const box=$("#sPrev");
-  if(PREV.has(phrase)){if(box)box.textContent=PREV.get(phrase);return;}
-  if(sampleFn||navigator.onLine===false)return;
-  if(box)box.innerHTML=`<span class="spin"></span>`;
-  let txt="";
-  try{const r=await wikt(phrase.toLowerCase());if(r){const p=parseWikt(r);txt=p.defs.length?"🇬🇧 "+p.defs.slice(0,2).join("; "):p.formText?"🇬🇧 "+p.formText:"";}}catch(e){}
-  PREV.set(phrase,txt);
-  if(storySel&&selText()===phrase){const b=$("#sPrev");if(b)b.textContent=txt;}
+  if(PREV.has(phrase)){if(box)box.innerHTML=PREV.get(phrase);return;}
+  const local=verbPreviewHTML(phrase),amb=AMBIG.has(phrase.trim().toLowerCase());
+  if(local&&!amb){PREV.set(phrase,local);if(box)box.innerHTML=local;return;}     // verb we know: meaning first, grammar as a note (works offline)
+  if(local&&box)box.innerHTML=local;
+  if(sampleFn||navigator.onLine===false){if(local)PREV.set(phrase,local);return;}
+  if(box&&!local)box.innerHTML=`<span class="spin"></span>`;
+  const sec=async w=>{if(!SEC())return "";const x=await mm(w,"es",LANG);return x&&wkey(x)!==wkey(w)?` · ${LANGS[LANG].flag} ${esc(x)}`:"";};
+  let html="";
+  try{
+    const r=await wikt(phrase.toLowerCase());const p=r?parseWikt(r):null;
+    if(p&&p.defs.length){
+      html=`<div class="smean">🇬🇧 ${esc(p.defs.slice(0,2).join("; "))}${await sec(phrase)}</div>`;
+      if(local)html+=`<div class="salt">${esc(t("alsoVerb"))}</div>${local}`;
+      else if(p.formOf)html+=`<div class="sgram">${esc(p.formText)}</div>`;
+    }else if(p&&p.formOf){                                                        // a form of another word: show that word's meaning first
+      const r2=await wikt(p.formOf);const p2=r2?parseWikt(r2):null;
+      html=`<div class="smean"><b>${esc(p.formOf)}</b>${p2&&p2.defs.length?" — 🇬🇧 "+esc(p2.defs.slice(0,2).join("; ")):""}${await sec(p.formOf)}</div><div class="sgram">${esc(p.formText)}</div>`;
+    }
+  }catch(e){}
+  if(!html&&local)html=local;
+  PREV.set(phrase,html);
+  if(storySel&&selText()===phrase){const b=$("#sPrev");if(b)b.innerHTML=html;}
 }
 
 /* ================= Classics ================= */
@@ -4208,6 +4295,9 @@ function renderFeedback(){
 }
 window.addEventListener("online",()=>{fbFlush();});
 
+Object.assign(T.en,{formOf:"form of {0}",gInf:"infinitive (dictionary form)",gPart:"participle (-ed form)",gGer:"gerund (-ing form)",gHay:"impersonal form: there is / there are",alsoVerb:"Also a verb form:"});
+Object.assign(T.tr,{formOf:"{0} fiilinin çekimi",gInf:"mastar (sözlük hali)",gPart:"participio (-mış hali)",gGer:"gerundio (-ıyor hali)",gHay:"kişisiz kullanım: var",alsoVerb:"Aynı zamanda bir fiil çekimi:"});
+Object.assign(T.de,{formOf:"Form von {0}",gInf:"Infinitiv (Grundform)",gPart:"Partizip",gGer:"Gerundium (Verlaufsform)",gHay:"unpersönlich: es gibt",alsoVerb:"Auch eine Verbform:"});
 renderHeader();
 route();
 try{loadGC();statsView();statsDaily();}catch(e){}
